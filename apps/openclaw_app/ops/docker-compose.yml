@@ -12,6 +12,19 @@ services:
       - redis
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/openclaw_app:/tmp/openclaw_app
+
+  worker:
+    build:
+      context: ../backend
+    command: ["python", "worker.py"]
+    env_file:
+      - ../.env.example
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - /tmp/openclaw_app:/tmp/openclaw_app
 
   postgres:
     image: postgres:16-alpine
@@ -36,6 +49,13 @@ services:
       - "4000:4000"
     volumes:
       - ./litellm_config.yaml:/app/config.yaml
+
+  sandbox-image:
+    build:
+      context: ../sandbox
+    image: openclaw-app-sandbox:latest
+    command: ["python", "/app/runner.py"]
+    profiles: ["build-only"]
 
 volumes:
   pgdata:

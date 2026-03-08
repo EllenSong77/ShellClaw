@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     litellm_base_url: str = "http://localhost:4000"
 
-    sandbox_image: str = "openclaw-sandbox:latest"
+    sandbox_image: str = "openclaw-app-sandbox:latest"
     sandbox_network: str = "openclaw_app_default"
     sandbox_workspace_root: str = "/tmp/openclaw_app/workspaces"
     free_daily_task_limit: int = 5
