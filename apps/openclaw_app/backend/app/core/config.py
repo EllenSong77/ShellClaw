@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     sandbox_image: str = "openclaw-sandbox:latest"
     sandbox_network: str = "openclaw_app_default"
+    sandbox_workspace_root: str = "/tmp/openclaw_app/workspaces"
     free_daily_task_limit: int = 5
     sandbox_idle_pause_minutes: int = 15
 
