@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     sandbox_image: str = "openclaw-app-sandbox:latest"
     sandbox_network: str = "openclaw_app_default"
     sandbox_workspace_root: str = "/tmp/openclaw_app/workspaces"
-    sandbox_command_template: str = "bash -lc 'printf %s \"{message}\"'"
+    sandbox_command_template: str = "openclaw agent --local --agent main --message \"{message}\" --json --timeout 120"
     free_daily_task_limit: int = 5
     sandbox_idle_pause_minutes: int = 15
 

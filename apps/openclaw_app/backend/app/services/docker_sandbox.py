@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,14 @@ class DockerSandboxResult:
 
 
 class DockerSandboxManager:
+    PASSTHROUGH_ENV_KEYS = [
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "GEMINI_API_KEY",
+    ]
+
     def __init__(self) -> None:
         self.client = docker.from_env()
 
@@ -29,6 +38,18 @@ class DockerSandboxManager:
         target = root / user_key
         target.mkdir(parents=True, exist_ok=True)
         return str(target)
+
+    def _sandbox_env(self, user_key: str) -> dict[str, str]:
+        env = {
+            "LITELLM_BASE_URL": settings.litellm_base_url,
+            "OPENCLAW_USER_KEY": user_key,
+            "OPENCLAW_TASK_COMMAND_TEMPLATE": settings.sandbox_command_template,
+        }
+        for key in self.PASSTHROUGH_ENV_KEYS:
+            value = os.getenv(key)
+            if value:
+                env[key] = value
+        return env
 
     def ensure_running(self, user_key: str) -> DockerSandboxResult:
         name = self._container_name(user_key)
@@ -72,11 +93,6 @@ class DockerSandboxManager:
 
     def _create_container(self, user_key: str, name: str) -> DockerSandboxResult:
         workspace = self._workspace_dir(user_key)
-        env = {
-            "LITELLM_BASE_URL": settings.litellm_base_url,
-            "OPENCLAW_USER_KEY": user_key,
-            "OPENCLAW_TASK_COMMAND_TEMPLATE": settings.sandbox_command_template,
-        }
         try:
             container = self.client.containers.run(
                 image=settings.sandbox_image,
@@ -87,7 +103,7 @@ class DockerSandboxManager:
                 mem_limit="512m",
                 nano_cpus=int(0.5 * 1_000_000_000),
                 network=settings.sandbox_network,
-                environment=env,
+                environment=self._sandbox_env(user_key),
                 volumes={workspace: {"bind": "/workspace", "mode": "rw"}},
                 labels={
                     "app": "openclaw_app",
