@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.sandbox import Sandbox
 from app.models.task import Task
 from app.models.daily_usage import DailyUsage
+from app.schemas.task import TaskResponse
 from app.schemas.user import RegisterRequest, SandboxResponse, UserResponse
 from app.services.docker_sandbox import DockerSandboxManager
 from app.services.quota import QuotaExceededError, QuotaService
@@ -115,6 +116,14 @@ def stop_sandbox(email: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(sandbox)
     return sandbox
+
+
+@router.get('/tasks/{task_id}', response_model=TaskResponse)
+def get_task(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id).one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail='任务不存在')
+    return task
 
 
 @router.post('/users/{email}/tasks')
