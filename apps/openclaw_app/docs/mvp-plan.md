@@ -21,7 +21,7 @@
    - 已验证宿主机 `codex exec` 可非交互执行
    - 若要在 sandbox 内直接跑 codex，下一步大概率需要挂载 codex CLI 与 `~/.codex` 认证目录，或改成由宿主机代理执行
 4. 实现 WebSocket 流式输出
-5. 给 worker 增加更细的状态更新 / 重试 / 超时处理
+5. 给 worker 增加更细的状态更新 / 重试 / 超时处理（当前已补 stdout/stderr/error_text/ended_at 回写）
 6. 再做前端（建议 React Native 或 Flutter 二选一）
 
 ## 当前判断

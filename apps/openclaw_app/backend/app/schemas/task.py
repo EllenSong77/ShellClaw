@@ -18,6 +18,9 @@ class TaskResponse(BaseModel):
     llm_calls: int
     input_tokens: int
     output_tokens: int
+    stdout_text: str | None
+    stderr_text: str | None
+    error_text: str | None
 
     class Config:
         from_attributes = True

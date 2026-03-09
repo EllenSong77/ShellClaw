@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 
 from redis import Redis
@@ -66,11 +67,16 @@ def handle_payload(payload_text: str):
             }.get(status, TaskStatus.ERROR)
             stdout = result.get('stdout', '') or ''
             stderr = result.get('stderr', '') or ''
+            error_text = result.get('error', '') or ''
             task.llm_calls = 1
             task.output_tokens = len(stdout)
             task.input_tokens = len(payload.get('message', '') or '')
+            task.stdout_text = stdout
+            task.stderr_text = stderr
+            task.error_text = error_text
             if 'duration_sec' in result and result['duration_sec'] is not None:
                 task.duration_sec = int(float(result['duration_sec']))
+            task.ended_at = datetime.utcnow()
             db.add(task)
             db.commit()
     finally:

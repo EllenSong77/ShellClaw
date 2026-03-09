@@ -24,6 +24,9 @@ class Task(Base):
     llm_calls: Mapped[int] = mapped_column(Integer, default=0)
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    stdout_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stderr_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     cost_cny: Mapped[Decimal] = mapped_column(Numeric(10, 4), default=0)
 
     user = relationship("User", back_populates="tasks")
