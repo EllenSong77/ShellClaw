@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -76,6 +75,7 @@ class DockerSandboxManager:
         env = {
             "LITELLM_BASE_URL": settings.litellm_base_url,
             "OPENCLAW_USER_KEY": user_key,
+            "OPENCLAW_TASK_COMMAND_TEMPLATE": settings.sandbox_command_template,
         }
         try:
             container = self.client.containers.run(

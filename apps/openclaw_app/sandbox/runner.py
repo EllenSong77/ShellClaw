@@ -1,4 +1,5 @@
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -10,6 +11,7 @@ INBOX = WORKSPACE / 'inbox'
 OUTBOX = WORKSPACE / 'outbox'
 STATE = WORKSPACE / 'state.json'
 DEFAULT_TIMEOUT = 120
+TASK_COMMAND_TEMPLATE = os.getenv('OPENCLAW_TASK_COMMAND_TEMPLATE', 'bash -lc \'printf %s "{message}"\'')
 
 INBOX.mkdir(parents=True, exist_ok=True)
 OUTBOX.mkdir(parents=True, exist_ok=True)
@@ -32,7 +34,8 @@ def build_command(task: dict) -> list[str]:
             return shlex.split(command)
         raise ValueError('task.command must be string or list')
 
-    return ['bash', '-lc', f'printf %s {shlex.quote(message)}']
+    rendered = TASK_COMMAND_TEMPLATE.format(message=message)
+    return shlex.split(rendered)
 
 
 def run_command(command: list[str], timeout: int) -> dict:
