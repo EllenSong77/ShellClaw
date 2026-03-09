@@ -1,2 +1,14 @@
 # Root-level docs are working notes / consultation materials.
 /docs/
+
+# Local OpenClaw runtime / assistant-private files.
+/.openclaw/
+/AGENTS.md
+/BOOTSTRAP.md
+/HEARTBEAT.md
+/IDENTITY.md
+/MEMORY.md
+/SOUL.md
+/TOOLS.md
+/USER.md
+/memory/
