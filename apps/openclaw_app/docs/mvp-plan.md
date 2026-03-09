@@ -18,6 +18,8 @@
 1. 接 Alembic，替换 `bootstrap-db`
 2. 实现真正的认证（JWT）
 3. 把占位 sandbox runner 替换为真实 OpenClaw 执行入口（当前已先升级为 subprocess + 可配置命令模板，下一步接真实 CLI）
+   - 已验证宿主机 `codex exec` 可非交互执行
+   - 若要在 sandbox 内直接跑 codex，下一步大概率需要挂载 codex CLI 与 `~/.codex` 认证目录，或改成由宿主机代理执行
 4. 实现 WebSocket 流式输出
 5. 给 worker 增加更细的状态更新 / 重试 / 超时处理
 6. 再做前端（建议 React Native 或 Flutter 二选一）

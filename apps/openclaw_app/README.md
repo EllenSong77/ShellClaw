@@ -27,3 +27,5 @@
 - sandbox runner 优先执行任务里显式传入的 `command`
 - 如果任务里未传 `command`，则走 `SANDBOX_COMMAND_TEMPLATE`
 - 这样可以先用简单命令打通闭环，再逐步切到真实 OpenClaw / Codex CLI 入口，而不用频繁改 runner 协议
+- 已在宿主机验证 `codex exec` 可非交互运行，可作为下一阶段的“真实 CLI 测试入口”候选
+- 当前新的工程判断：若要在 sandbox 内直接运行 codex，需要处理 CLI 二进制与 `~/.codex` 认证状态的可用性；否则可先走宿主机代理执行方案
