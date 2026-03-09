@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash curl git ca-certificates && \
+    bash curl git ca-certificates jq procps && \
     rm -rf /var/lib/apt/lists/*
 
 COPY runner.py /app/runner.py

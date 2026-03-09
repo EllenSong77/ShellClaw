@@ -36,7 +36,14 @@ def wait_for_result(user_id: str, task_id: str, timeout: int = 30) -> dict:
             result_path.unlink(missing_ok=True)
             return data
         time.sleep(1)
-    return {'task_id': task_id, 'status': 'timeout', 'error': 'worker wait timeout'}
+    return {
+        'task_id': task_id,
+        'status': 'timeout',
+        'error': 'worker wait timeout',
+        'stdout': '',
+        'stderr': '',
+        'return_code': None,
+    }
 
 
 def handle_payload(payload_text: str):
@@ -57,13 +64,19 @@ def handle_payload(payload_text: str):
                 'timeout': TaskStatus.TIMEOUT,
                 'error': TaskStatus.ERROR,
             }.get(status, TaskStatus.ERROR)
-            chunks = result.get('chunks', [])
+            stdout = result.get('stdout', '') or ''
+            stderr = result.get('stderr', '') or ''
             task.llm_calls = 1
-            task.output_tokens = sum(len(c) for c in chunks)
+            task.output_tokens = len(stdout)
+            task.input_tokens = len(payload.get('message', '') or '')
+            if 'duration_sec' in result and result['duration_sec'] is not None:
+                task.duration_sec = int(float(result['duration_sec']))
             db.add(task)
             db.commit()
     finally:
         db.close()
+
+    return result
 
 
 def main():
