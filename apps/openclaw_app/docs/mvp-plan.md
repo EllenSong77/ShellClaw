@@ -17,7 +17,7 @@
 ## 下一步
 1. 接 Alembic，替换 `bootstrap-db`
 2. 实现真正的认证（JWT）
-3. 把占位 sandbox runner 替换为真实 OpenClaw 执行入口
+3. 把占位 sandbox runner 替换为真实 OpenClaw 执行入口（当前已先升级为 subprocess + 可配置命令模板，下一步接真实 CLI）
 4. 实现 WebSocket 流式输出
 5. 给 worker 增加更细的状态更新 / 重试 / 超时处理
 6. 再做前端（建议 React Native 或 Flutter 二选一）

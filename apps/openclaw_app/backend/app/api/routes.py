@@ -24,6 +24,8 @@ router = APIRouter()
 
 class TaskCreateRequest(BaseModel):
     message: str
+    command: str | list[str] | None = None
+    timeout_sec: int | None = None
 
 
 @router.get('/healthz')
@@ -149,6 +151,8 @@ def create_task(email: str, payload: TaskCreateRequest, db: Session = Depends(ge
             'sandbox_id': str(sandbox.id),
             'container_id': sandbox.container_id,
             'message': payload.message,
+            'command': payload.command,
+            'timeout_sec': payload.timeout_sec,
         },
         user.plan,
     )

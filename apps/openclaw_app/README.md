@@ -22,3 +22,8 @@
 3. 实现注册 / 工作区 / 沙箱记录
 4. 接入 Docker SDK 做真实沙箱调度
 5. 再接 WebSocket 流式任务
+
+当前执行入口约定（临时版）：
+- sandbox runner 优先执行任务里显式传入的 `command`
+- 如果任务里未传 `command`，则走 `SANDBOX_COMMAND_TEMPLATE`
+- 这样可以先用简单命令打通闭环，再逐步切到真实 OpenClaw / Codex CLI 入口，而不用频繁改 runner 协议
