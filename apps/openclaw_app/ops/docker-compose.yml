@@ -24,6 +24,7 @@ services:
       - postgres
       - redis
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/openclaw_app:/tmp/openclaw_app
 
   postgres:
@@ -53,7 +54,7 @@ services:
   sandbox-image:
     build:
       context: ../sandbox
-    image: openclaw-app-sandbox:latest
+    image: shellclaw-sandbox:latest
     command: ["python", "/app/runner.py"]
     profiles: ["build-only"]
 

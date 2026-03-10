@@ -22,5 +22,7 @@ class TaskResponse(BaseModel):
     stderr_text: str | None
     error_text: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True,
+        "protected_namespaces": (),
+    }

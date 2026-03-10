@@ -9,6 +9,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.enums import TaskStatus
 
+task_status_enum = Enum(
+    TaskStatus,
+    name="task_status_enum",
+    values_callable=lambda enum_cls: [item.value for item in enum_cls],
+)
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -19,7 +25,7 @@ class Task(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_sec: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    status: Mapped[TaskStatus | None] = mapped_column(Enum(TaskStatus, name="task_status_enum"), nullable=True)
+    status: Mapped[TaskStatus | None] = mapped_column(task_status_enum, nullable=True)
     model_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_calls: Mapped[int] = mapped_column(Integer, default=0)
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
