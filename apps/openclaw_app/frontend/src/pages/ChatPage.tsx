@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, AlertCircle, CheckCircle, Clock, XCircle, Wifi, WifiOff } from 'lucide-react';
+import { Send, Loader2, AlertCircle, CheckCircle, Clock, XCircle, Wifi, WifiOff, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { useAuthStore } from '../stores/auth';
 import { useTaskStore } from '../stores/task';
 import { api, ApiError } from '../api/client';
 import { useTaskPolling } from '../hooks/useTaskPolling';
 import { useWebSocket } from '../hooks/useWebSocket';
-import type { TaskStatus } from '../types';
+import type { TaskStatus, ApiErrorDetail } from '../types';
 
 function StatusIndicator({ status, isStreaming }: { status?: TaskStatus | 'pending'; isStreaming?: boolean }) {
   if (isStreaming || status === 'running') {
@@ -54,6 +55,7 @@ function StatusIndicator({ status, isStreaming }: { status?: TaskStatus | 'pendi
 }
 
 export function ChatPage() {
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,18 +78,16 @@ export function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const [errorDetail, setErrorDetail] = useState<ApiErrorDetail | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isSending || isStreaming || !user) return;
 
-    if (usage?.daily_limit && usage.daily_used >= usage.daily_limit) {
-      setError('Daily task limit reached. Try again tomorrow or upgrade.');
-      return;
-    }
-
     const message = input.trim();
     setInput('');
     setError(null);
+    setErrorDetail(null);
     setIsSending(true);
 
     addUserMessage(message);
@@ -98,7 +98,12 @@ export function ChatPage() {
     } catch (err) {
       let errorMessage = 'Failed to send message';
       if (err instanceof ApiError) {
-        errorMessage = err.status === 429 ? 'Rate limit reached.' : err.message;
+        if (typeof err.detail === 'object') {
+          setErrorDetail(err.detail);
+          errorMessage = err.detail.message || errorMessage;
+        } else {
+          errorMessage = err.detail || errorMessage;
+        }
       }
       setError(errorMessage);
     } finally {
@@ -112,6 +117,52 @@ export function ChatPage() {
       e.preventDefault();
       handleSubmit(e);
     }
+  };
+
+  const renderErrorBanner = () => {
+    if (!error) return null;
+
+    const isUpgradeRequired = errorDetail?.upgrade_required || 
+                             errorDetail?.code === 'DAILY_LIMIT_REACHED' || 
+                             errorDetail?.code === 'TRIAL_ENDED' ||
+                             errorDetail?.code === 'PLAN_UPGRADE_REQUIRED';
+
+    return (
+      <div className={`px-4 py-3 border-b flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 ${
+        isUpgradeRequired ? 'bg-[#FACC15]/10 border-[#FACC15]/20' : 'bg-[#F87171]/10 border-[#F87171]/20'
+      }`}>
+        <div className="flex items-center gap-2 flex-1">
+          {isUpgradeRequired ? (
+            <Zap size={16} className="text-[#FACC15] shrink-0" />
+          ) : (
+            <AlertCircle size={16} className="text-[#F87171] shrink-0" />
+          )}
+          <div className="flex flex-col">
+            <span className={`text-xs font-bold uppercase tracking-wider ${isUpgradeRequired ? 'text-[#FACC15]' : 'text-[#F87171]'}`}>
+              {errorDetail?.code?.replace(/_/g, ' ') || 'SYSTEM ERROR'}
+            </span>
+            <span className="text-xs text-[#A1A1A1] mt-0.5">{error}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {isUpgradeRequired && (
+            <button
+              onClick={() => navigate('/pricing')}
+              className="bg-[#22D3EE] hover:bg-[#67E8F9] text-black text-[10px] font-bold px-3 py-1.5 rounded uppercase tracking-wider transition-all active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
+            >
+              Upgrade Now
+            </button>
+          )}
+          <button
+            onClick={() => { setError(null); setErrorDetail(null); }}
+            className="text-[#6B6B6B] hover:text-white p-1"
+          >
+            <XCircle size={16} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -142,23 +193,16 @@ export function ChatPage() {
       </div>
 
       {/* Error banner */}
-      {error && (
-        <div className="bg-[#F87171]/10 border-b border-[#F87171]/20 px-4 py-2 flex items-center gap-2">
-          <AlertCircle size={14} className="text-[#F87171]" />
-          <span className="text-xs text-[#F87171] font-mono flex-1">{error}</span>
-          <button onClick={() => setError(null)} className="text-[#F87171]/60 hover:text-[#F87171]">
-            <XCircle size={14} />
-          </button>
-        </div>
-      )}
+      {renderErrorBanner()}
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto mt-6">
         {messages.length === 0 ? (
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center px-4 text-center">
             <Logo size="lg" showText={true} />
             <p className="text-sm text-[#6B6B6B] mt-3 mb-6">Your terminal AI assistant</p>
+
             <div className="bg-[#141414] border border-[#2A2A2A] rounded-lg p-4 max-w-sm">
               <p className="text-xs text-[#6B6B6B] font-mono mb-2">$ shellclaw --help</p>
               <p className="text-sm text-[#A1A1A1]">Type a message below to start a task. I can help with code, debugging, and more.</p>

@@ -107,3 +107,90 @@ export interface WSCreateTaskAction {
   message: string;
   timeout_sec?: number;
 }
+
+// ============ Billing Types ============
+
+export type BillingProvider = 'mock' | 'stripe' | 'alipay' | 'wechat';
+export type BillingOrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'trialing';
+
+export interface PlanFeatureResponse {
+  plan: Plan;
+  label: string;
+  price_month_cny: number;
+  task_limit_daily: number | null;
+  max_concurrency: number;
+  workspace_limit_mb: number;
+  sandbox_timeout_minutes: number;
+  highlighted: boolean;
+}
+
+export interface SubscriptionResponse {
+  plan: Plan;
+  subscription_status: SubscriptionStatus;
+  trial_ends_at: string | null;
+  paid_until: string | null;
+  subscription_started_at: string | null;
+  cancel_at_period_end: boolean;
+  billing_provider: BillingProvider | null;
+  billing_customer_id: string | null;
+  current_period_ends_at: string | null;
+  is_paid: boolean;
+  trial_days_remaining: number | null;
+  plans: PlanFeatureResponse[];
+}
+
+export interface BillingOrderResponse {
+  id: string;
+  plan: Plan;
+  provider: BillingProvider;
+  status: BillingOrderStatus;
+  amount_cny: number;
+  currency: string;
+  external_order_id: string | null;
+  checkout_url: string | null;
+  created_at: string;
+  paid_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface BillingSummaryResponse {
+  subscription: SubscriptionResponse;
+  recent_orders: BillingOrderResponse[];
+}
+
+export interface BillingOrdersResponse {
+  items: BillingOrderResponse[];
+}
+
+export interface CheckoutRequest {
+  plan: Plan;
+  provider?: BillingProvider;
+  success_url?: string;
+  cancel_url?: string;
+}
+
+export interface CheckoutResponse {
+  ok: boolean;
+  order: BillingOrderResponse;
+  checkout_url: string | null;
+  provider: BillingProvider;
+  mock: boolean;
+}
+
+export interface BillingPortalResponse {
+  ok: boolean;
+  url: string;
+  provider: BillingProvider;
+}
+
+// ============ Error Types ============
+
+export interface ApiErrorDetail {
+  code?: string;
+  message?: string;
+  upgrade_required?: boolean;
+  current_plan?: Plan;
+  suggested_plan?: Plan;
+  [key: string]: unknown;
+}

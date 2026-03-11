@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models.enums import Plan
+from app.models.enums import Plan, SubscriptionStatus
 from app.models.user import User
 
 
@@ -14,10 +14,12 @@ def normalize_user_plan(db: Session, user: User) -> User:
 
     if user.plan == Plan.TRIAL and user.trial_ends_at and user.trial_ends_at <= now:
         user.plan = Plan.FREE
+        user.subscription_status = SubscriptionStatus.EXPIRED
         updated = True
 
     if user.plan in {Plan.PAID_PERSONAL, Plan.PAID_PRO} and user.paid_until and user.paid_until <= now:
         user.plan = Plan.FREE
+        user.subscription_status = SubscriptionStatus.EXPIRED
         updated = True
 
     if updated:

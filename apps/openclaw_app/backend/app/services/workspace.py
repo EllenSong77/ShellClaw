@@ -11,11 +11,13 @@ class WorkspaceService:
     def __init__(self, user_id: str):
         self.root = Path(settings.sandbox_workspace_root) / user_id
         self.root.mkdir(parents=True, exist_ok=True)
+        self.public_root = self.root / "uploads"
+        self.public_root.mkdir(parents=True, exist_ok=True)
 
     def _resolve(self, relative_path: str | None = None) -> Path:
         relative = (relative_path or "").strip().lstrip("/")
-        candidate = (self.root / relative).resolve()
-        if self.root.resolve() not in candidate.parents and candidate != self.root.resolve():
+        candidate = (self.public_root / relative).resolve()
+        if self.public_root.resolve() not in candidate.parents and candidate != self.public_root.resolve():
             raise HTTPException(status_code=400, detail="非法路径")
         return candidate
 
@@ -31,13 +33,13 @@ class WorkspaceService:
             stat = entry.stat()
             entries.append(
                 {
-                    "path": str(entry.relative_to(self.root)),
+                    "path": str(entry.relative_to(self.public_root)),
                     "name": entry.name,
                     "is_dir": entry.is_dir(),
                     "size": 0 if entry.is_dir() else stat.st_size,
                 }
             )
-        base_path = "" if target == self.root else str(target.relative_to(self.root))
+        base_path = "" if target == self.public_root else str(target.relative_to(self.public_root))
         return base_path, entries
 
     def read_file(self, relative_path: str) -> Path:
@@ -53,7 +55,7 @@ class WorkspaceService:
         content = await file.read()
         target.write_bytes(content)
         return {
-            "path": str(target.relative_to(self.root)),
+            "path": str(target.relative_to(self.public_root)),
             "name": target.name,
             "is_dir": False,
             "size": target.stat().st_size,

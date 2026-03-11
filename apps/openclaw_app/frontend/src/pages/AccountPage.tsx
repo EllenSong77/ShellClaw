@@ -1,24 +1,22 @@
-import { useEffect } from 'react';
-import { User, Crown, Calendar, Database, LogOut, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { User, Crown, Database, LogOut, Zap, CreditCard, FileText, ShieldCheck, AlertCircle, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
+import { api } from '../api/client';
+import type { BillingSummaryResponse } from '../types';
 
 const PLAN_NAMES: Record<string, string> = {
-  trial: 'Free Trial',
-  free: 'Free',
-  paid_personal: 'Personal',
-  paid_pro: 'Professional',
-};
-
-const PLAN_COLORS: Record<string, string> = {
-  trial: 'text-[#60A5FA] bg-[#60A5FA]/10 border-[#60A5FA]/20',
-  free: 'text-[#A1A1A1] bg-[#A1A1A1]/10 border-[#A1A1A1]/20',
-  paid_personal: 'text-[#C084FC] bg-[#C084FC]/10 border-[#C084FC]/20',
-  paid_pro: 'text-[#FACC15] bg-[#FACC15]/10 border-[#FACC15]/20',
+  trial: 'Trial Tier',
+  free: 'Free Tier',
+  paid_personal: 'Personal Pro',
+  paid_pro: 'Ultimate Pro',
 };
 
 export function AccountPage() {
   const navigate = useNavigate();
+  const [billingSummary, setBillingSummary] = useState<BillingSummaryResponse | null>(null);
+  const [, setLoading] = useState(true);
+
   const user = useAuthStore((state) => state.user);
   const usage = useAuthStore((state) => state.usage);
   const sandbox = useAuthStore((state) => state.sandbox);
@@ -31,143 +29,201 @@ export function AccountPage() {
     refreshUser();
     refreshUsage();
     refreshSandbox();
+    fetchBillingSummary();
   }, [refreshSandbox, refreshUsage, refreshUser]);
+
+  const fetchBillingSummary = async () => {
+    setLoading(true);
+    try {
+      const summary = await api.getBillingSummary();
+      setBillingSummary(summary);
+    } catch (err) {
+      console.error('Failed to fetch billing summary:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const getTrialDaysRemaining = () => {
-    const endsAt = usage?.trial_ends_at || user?.trial_ends_at;
-    if (!endsAt) return 0;
-    const ends = new Date(endsAt);
-    const now = new Date();
-    const diff = ends.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const getPlanExpiry = () => {
-    const paidUntil = usage?.paid_until ?? user?.paid_until;
-    if (!paidUntil) return null;
-    return new Date(paidUntil).toLocaleDateString();
-  };
+  if (!user) return null;
 
-  if (!user) {
-    return null;
-  }
-
-  const trialDaysRemaining = getTrialDaysRemaining();
+  const subscription = billingSummary?.subscription;
+  const recentOrders = billingSummary?.recent_orders || [];
   const dailyUsed = usage?.daily_used ?? 0;
   const dailyLimit = usage?.daily_limit;
-  const dailyRemaining = usage?.daily_remaining;
+  
+  const currentPlan = subscription?.plan || user.plan;
+  const subStatus = subscription?.subscription_status || 'inactive';
+  const isPaid = subscription?.is_paid || false;
+
+  const getPlanIcon = (plan: string) => {
+    switch (plan) {
+      case 'paid_pro': return <Crown size={10} fill="currentColor" />;
+      case 'paid_personal': return <Zap size={10} fill="currentColor" />;
+      case 'trial': return <Clock size={10} fill="currentColor" />;
+      default: return <User size={10} fill="currentColor" />;
+    }
+  };
+
+  const getPlanTheme = (plan: string) => {
+    switch (plan) {
+      case 'paid_pro': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
+      case 'paid_personal': return 'text-purple-400 bg-purple-400/10 border-purple-400/20';
+      case 'trial': return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+      default: return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
+    }
+  };
+
+  const themeClass = getPlanTheme(currentPlan);
 
   return (
     <div className="h-full overflow-y-auto p-4 pb-20 bg-[#0A0A0A]">
-      <div className="max-w-md mx-auto space-y-3">
-        {/* Profile Card */}
-        <div className="bg-[#141414] rounded-lg p-5 border border-[#2A2A2A]">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 bg-[#22D3EE]/10 rounded-lg flex items-center justify-center">
-              <User className="text-[#22D3EE]" size={28} />
+      <div className="max-w-md mx-auto space-y-5">
+        {/* Profile & Plan Header */}
+        <div className={`relative overflow-hidden bg-[#141414] rounded-2xl p-6 border ${themeClass.split(' ').pop()} shadow-[0_20px_40px_rgba(0,0,0,0.2)]`}>
+          <div className="relative flex items-center gap-5 mb-6">
+            <div className={`w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shadow-inner`}>
+              <User className="text-white/20" size={32} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-mono text-[#A1A1A1] truncate">{user.email}</p>
-              <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium mt-1 border ${PLAN_COLORS[user.plan]}`}>
-                <Crown size={12} />
-                {PLAN_NAMES[user.plan]}
+              <p className="text-sm font-bold text-white truncate mb-1.5 uppercase tracking-tight">{user.email}</p>
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border ${themeClass}`}>
+                {getPlanIcon(currentPlan)}
+                {PLAN_NAMES[currentPlan]}
               </div>
             </div>
           </div>
 
-          {/* Trial countdown */}
-          {user.plan === 'trial' && trialDaysRemaining > 0 && (
-            <div className="bg-[#60A5FA]/5 border border-[#60A5FA]/20 rounded-md p-3 mb-3">
-              <div className="flex items-center gap-2 text-[#60A5FA] text-sm">
-                <Calendar size={14} />
-                <span className="font-medium">{trialDaysRemaining} days remaining in trial</span>
-              </div>
-              <p className="text-xs text-[#6B6B6B] mt-1 ml-5">
-                Upgrade to keep using ShellClaw after your trial ends
-              </p>
-            </div>
-          )}
-
-          {/* Plan expiry */}
-          {user.plan !== 'trial' && user.plan !== 'free' && getPlanExpiry() && (
-            <div className="bg-[#1A1A1A] rounded-md p-3 text-sm">
-              <div className="flex items-center gap-2 text-[#A1A1A1]">
-                <Calendar size={14} />
-                <span>Valid until: <span className="text-[#FAFAFA]">{getPlanExpiry()}</span></span>
+          <div className="grid grid-cols-2 gap-3 relative">
+            <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#262626] flex flex-col items-center text-center">
+              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">Subscription</p>
+              <div className="flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${subStatus === 'active' ? 'bg-[#4ADE80]' : 'bg-red-500'}`} />
+                <span className="text-xs font-black uppercase tracking-tight text-white">{subStatus}</span>
               </div>
             </div>
-          )}
+            <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#262626] flex flex-col items-center text-center">
+              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">Payment</p>
+              <div className="flex items-center gap-2">
+                {isPaid ? <ShieldCheck size={12} className="text-[#4ADE80]" /> : <AlertCircle size={12} className="text-red-500" />}
+                <span className="text-xs font-black uppercase tracking-tight text-white">{isPaid ? 'Paid' : 'Unpaid'}</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/pricing')}
+            className="flex items-center justify-center gap-3 p-4 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all active:scale-[0.97] bg-[#22D3EE] border border-[#22D3EE] text-black shadow-[0_10px_20px_rgba(34,211,238,0.2)]"
+          >
+            <Zap size={16} fill="currentColor" />
+            Upgrade Plan
+          </button>
+          <button
+            onClick={() => navigate('/billing')}
+            className="flex items-center justify-center gap-3 p-4 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all active:scale-[0.97] bg-[#141414] border border-[#1F1F1F] text-[#808080] hover:border-[#22D3EE]/30 hover:text-white"
+          >
+            <FileText size={16} />
+            History
+          </button>
+        </div>
+
+        {/* Subscription Detail Card */}
+        <div className="bg-[#141414] rounded-2xl p-6 border border-[#1F1F1F]">
+          <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
+            <CreditCard size={12} />
+            Details
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">Member Since</span>
+              <span className="text-[11px] font-black font-mono text-white">{formatDate(subscription?.subscription_started_at || null)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">Next Billing</span>
+              <span className="text-[11px] font-black font-mono text-white">{formatDate(subscription?.current_period_ends_at || null)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Orders */}
+        {recentOrders.length > 0 && (
+          <div className="bg-[#141414] rounded-2xl p-6 border border-[#1F1F1F]">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] flex items-center gap-2">
+                <FileText size={12} />
+                Recent Orders
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {recentOrders.slice(0, 2).map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-xl border border-[#262626]">
+                  <div>
+                    <p className="text-[11px] font-bold text-white uppercase tracking-tight">{PLAN_NAMES[order.plan]}</p>
+                    <p className="text-[9px] text-[#404040] font-mono">{formatDate(order.created_at)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-white font-mono">¥{order.amount_cny}</p>
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${order.status === 'paid' ? 'text-green-500' : 'text-yellow-500'}`}>{order.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Usage Card */}
-        <div className="bg-[#141414] rounded-lg p-5 border border-[#2A2A2A]">
-          <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wide mb-3">Today's Usage</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#1A1A1A] rounded-md p-3">
-              <p className="text-[#6B6B6B] text-xs mb-1">Tasks</p>
-              <p className="text-xl font-semibold font-mono">
-                {dailyUsed}
-                {dailyLimit && <span className="text-[#6B6B6B] text-base">/{dailyLimit}</span>}
-              </p>
-              {dailyRemaining !== null && dailyRemaining !== undefined && (
-                <p className="text-xs text-[#4ADE80] mt-0.5">{dailyRemaining} left</p>
-              )}
-            </div>
-            <div className="bg-[#1A1A1A] rounded-md p-3">
-              <p className="text-[#6B6B6B] text-xs mb-1">Sandbox</p>
-              <div className="flex items-center gap-2 mt-1">
-                <div className={`w-2 h-2 rounded-full ${
-                  sandbox?.status === 'running' ? 'bg-[#4ADE80]' :
-                  sandbox?.status === 'paused' ? 'bg-[#FACC15]' :
-                  'bg-[#6B6B6B]'
-                }`} />
-                <span className="text-sm font-medium capitalize font-mono">
-                  {sandbox?.status || 'unknown'}
-                </span>
+        <div className="bg-[#141414] rounded-2xl p-6 border border-[#1F1F1F]">
+          <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] mb-6">Resource Usage</h3>
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between text-[11px] mb-2 font-bold">
+                <span className="text-[#6B6B6B] uppercase tracking-wider">Tasks</span>
+                <span className="text-white font-mono">{dailyUsed} / {dailyLimit || '∞'}</span>
               </div>
-            </div>
-          </div>
-
-          {user.plan === 'free' && dailyLimit && dailyUsed >= dailyLimit && (
-            <div className="mt-3 bg-[#FACC15]/5 border border-[#FACC15]/20 rounded-md p-2.5 text-[#FACC15] text-xs flex items-center gap-2">
-              <Zap size={14} />
-              <span>Daily limit reached. Upgrade for unlimited tasks.</span>
-            </div>
-          )}
-        </div>
-
-        {/* Storage Card */}
-        <div className="bg-[#141414] rounded-lg p-5 border border-[#2A2A2A]">
-          <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wide mb-3">Workspace Storage</h3>
-          <div className="flex items-center gap-3">
-            <Database className="text-[#6B6B6B]" size={20} />
-            <div className="flex-1">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-[#6B6B6B]">Used</span>
-                <span className="font-mono">{sandbox?.workspace_size_mb || 0} MB</span>
-              </div>
-              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+              <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden border border-[#262626] p-0.5">
                 <div
-                  className="h-full bg-[#22D3EE] rounded-full transition-all"
-                  style={{ width: `${Math.min(100, ((sandbox?.workspace_size_mb || 0) / 50) * 100)}%` }}
+                  className="h-full bg-[#22D3EE] rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(34,211,238,0.3)]"
+                  style={{ width: `${dailyLimit ? Math.min(100, (dailyUsed / dailyLimit) * 100) : 10}%` }}
                 />
               </div>
             </div>
+
+            <div className="flex items-center justify-between bg-[#1A1A1A] rounded-xl p-4 border border-[#262626]">
+              <div className="flex items-center gap-4">
+                <Database size={20} className="text-[#22D3EE]" />
+                <div>
+                  <p className="text-[10px] font-black text-[#404040] uppercase tracking-widest mb-0.5">Workspace</p>
+                  <p className="text-sm font-black text-white font-mono">{sandbox?.workspace_size_mb || 0} MB</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-[#262626]" />
+            </div>
           </div>
         </div>
 
-        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="w-full bg-[#141414] hover:bg-[#1A1A1A] text-[#F87171] rounded-lg p-3 flex items-center justify-center gap-2 transition-colors border border-[#2A2A2A] text-sm font-medium"
+          className="w-full bg-[#141414] hover:bg-red-500/5 text-[#404040] hover:text-red-500 rounded-2xl p-4 flex items-center justify-center gap-3 transition-all border border-[#1F1F1F] hover:border-red-500/20 text-xs font-black uppercase tracking-[0.2em] active:scale-[0.99]"
         >
           <LogOut size={16} />
-          Sign out
+          Sign Out
         </button>
       </div>
     </div>

@@ -16,9 +16,18 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.db.session import SessionLocal, get_db
-from app.models.enums import Plan, SandboxStatus, TaskStatus
+from app.models.billing_order import BillingOrder
+from app.models.enums import BillingOrderStatus, BillingProvider, Plan, SandboxStatus, TaskStatus
 from app.models.task import Task
 from app.models.user import User
+from app.schemas.billing import (
+    BillingOrdersResponse,
+    BillingPortalResponse,
+    BillingSummaryResponse,
+    CheckoutRequest,
+    CheckoutResponse,
+    SubscriptionResponse,
+)
 from app.schemas.file import WorkspaceEntry, WorkspaceListResponse
 from app.schemas.task import TaskResponse
 from app.schemas.task_list import TaskListResponse
@@ -31,7 +40,18 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.services.auth import get_current_user
+from app.services.billing import (
+    billing_summary_for_user,
+    create_mock_checkout,
+    list_orders_for_user,
+    mark_order_cancelled,
+    mark_order_failed,
+    mark_order_paid,
+    portal_url_for_user,
+    subscription_for_user,
+)
 from app.services.docker_sandbox import DockerSandboxManager
+from app.services.errors import api_error
 from app.services.events import TaskEventPublisher, user_events_channel
 from app.services.quota import QuotaExceededError, QuotaService
 from app.services.sandbox import SandboxService
@@ -72,10 +92,30 @@ def get_usage_for_user(user: User) -> UsageResponse:
 def create_task_for_user(db: Session, user: User, payload: TaskCreateRequest) -> dict:
     user = normalize_user_plan(db, user)
     client = redis_client()
+    if user.plan == Plan.FREE and payload.command:
+        raise api_error(
+            403,
+            code="PLAN_UPGRADE_REQUIRED",
+            message="当前套餐不支持高级任务能力，请升级后继续使用。",
+            upgrade_required=True,
+            current_plan=user.plan,
+            suggested_plan=Plan.PAID_PERSONAL,
+            redirect_to="/pricing",
+            action="upgrade",
+        )
     try:
-        QuotaService(client).check_and_consume(str(user.id), user.plan)
+        QuotaService(client).check_and_consume(str(user.id), user.plan, user.subscription_status)
     except QuotaExceededError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
+        raise api_error(
+            429,
+            code=exc.code,
+            message=exc.message,
+            upgrade_required=exc.upgrade_required,
+            current_plan=user.plan,
+            suggested_plan=exc.suggested_plan,
+            redirect_to=exc.redirect_to,
+            action=exc.action,
+        ) from exc
 
     sandbox_service = SandboxService(db)
     sandbox_service.pause_idle_sandboxes()
@@ -167,6 +207,116 @@ def me(current_user: User = Depends(get_current_user)):
 @router.get('/me/usage', response_model=UsageResponse)
 def my_usage(current_user: User = Depends(get_current_user)):
     return get_usage_for_user(current_user)
+
+
+@router.get('/me/subscription', response_model=SubscriptionResponse)
+def get_my_subscription(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = normalize_user_plan(db, current_user)
+    return subscription_for_user(user)
+
+
+@router.get('/me/billing', response_model=BillingSummaryResponse)
+def get_my_billing(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = normalize_user_plan(db, current_user)
+    return billing_summary_for_user(db, user)
+
+
+@router.get('/me/orders', response_model=BillingOrdersResponse)
+def get_my_orders(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = normalize_user_plan(db, current_user)
+    return BillingOrdersResponse(items=list_orders_for_user(db, user))
+
+
+@router.post('/billing/checkout', response_model=CheckoutResponse)
+def create_checkout(payload: CheckoutRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if payload.plan in {Plan.FREE, Plan.TRIAL}:
+        raise api_error(
+            400,
+            code="INVALID_BILLING_PLAN",
+            message="请选择付费套餐。",
+            current_plan=current_user.plan,
+            suggested_plan=Plan.PAID_PERSONAL,
+            redirect_to="/pricing",
+            action="upgrade",
+        )
+    user = normalize_user_plan(db, current_user)
+    try:
+        return create_mock_checkout(db, user, payload.plan, payload.provider, payload.success_url, payload.cancel_url)
+    except NotImplementedError:
+        raise api_error(
+            400,
+            code="UNSUPPORTED_BILLING_PROVIDER",
+            message="当前支付渠道暂未开放。",
+            current_plan=user.plan,
+            suggested_plan=payload.plan,
+        )
+
+
+@router.post('/billing/portal', response_model=BillingPortalResponse)
+def create_billing_portal(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = normalize_user_plan(db, current_user)
+    try:
+        provider, url = portal_url_for_user(user)
+    except NotImplementedError:
+        raise api_error(400, code="UNSUPPORTED_BILLING_PROVIDER", message="当前支付渠道暂未开放。")
+    return BillingPortalResponse(ok=True, url=url, provider=provider)
+
+
+@router.post('/billing/orders/{order_id}/mock/complete')
+def complete_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = normalize_user_plan(db, current_user)
+    order = (
+        db.query(BillingOrder)
+        .filter(BillingOrder.id == order_id, BillingOrder.user_id == user.id)
+        .one_or_none()
+    )
+    if order is None:
+        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    if order.provider != BillingProvider.MOCK:
+        raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
+    if order.status == BillingOrderStatus.PAID:
+        return order
+    if order.status in {BillingOrderStatus.CANCELLED, BillingOrderStatus.REFUNDED}:
+        raise api_error(409, code="ORDER_STATE_INVALID", message="当前订单状态不允许完成支付。")
+    return mark_order_paid(db, user, order)
+
+
+@router.post('/billing/orders/{order_id}/mock/fail')
+def fail_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    _user = normalize_user_plan(db, current_user)
+    order = (
+        db.query(BillingOrder)
+        .filter(BillingOrder.id == order_id, BillingOrder.user_id == current_user.id)
+        .one_or_none()
+    )
+    if order is None:
+        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    if order.provider != BillingProvider.MOCK:
+        raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
+    if order.status == BillingOrderStatus.PAID:
+        raise api_error(409, code="ORDER_STATE_INVALID", message="已支付订单不能标记为失败。")
+    if order.status == BillingOrderStatus.CANCELLED:
+        raise api_error(409, code="ORDER_STATE_INVALID", message="已取消订单不能标记为失败。")
+    return mark_order_failed(db, order)
+
+
+@router.post('/billing/orders/{order_id}/mock/cancel')
+def cancel_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    _user = normalize_user_plan(db, current_user)
+    order = (
+        db.query(BillingOrder)
+        .filter(BillingOrder.id == order_id, BillingOrder.user_id == current_user.id)
+        .one_or_none()
+    )
+    if order is None:
+        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    if order.provider != BillingProvider.MOCK:
+        raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
+    if order.status == BillingOrderStatus.PAID:
+        raise api_error(409, code="ORDER_STATE_INVALID", message="已支付订单不能取消。")
+    if order.status == BillingOrderStatus.CANCELLED:
+        return order
+    return mark_order_cancelled(db, order)
 
 
 @router.get('/me/sandbox', response_model=SandboxResponse)

@@ -12,6 +12,8 @@ import { AccountPage } from './pages/AccountPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TaskDetailPage } from './pages/TaskDetailPage';
 import { WorkspacePage } from './pages/WorkspacePage';
+import { PricingPage } from './pages/PricingPage';
+import { BillingPage } from './pages/BillingPage';
 import { useAuthStore } from './stores/auth';
 
 const queryClient = new QueryClient({
@@ -77,6 +79,8 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="tasks/:taskId" element={<TaskDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
+            <Route path="pricing" element={<PricingPage />} />
+            <Route path="billing" element={<BillingPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/chat" replace />} />

@@ -8,6 +8,13 @@ import type {
   CreateTaskRequest,
   CreateTaskResponse,
   Workspace,
+  SubscriptionResponse,
+  BillingOrdersResponse,
+  BillingSummaryResponse,
+  CheckoutRequest,
+  CheckoutResponse,
+  BillingPortalResponse,
+  ApiErrorDetail,
 } from '../types';
 
 const API_BASE = '/api';
@@ -35,11 +42,14 @@ export function clearToken(): void {
 
 export class ApiError extends Error {
   status: number;
+  detail: ApiErrorDetail | string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, detail: ApiErrorDetail | string) {
+    const message = typeof detail === 'string' ? detail : detail.message || 'Request failed';
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.detail = detail;
   }
 }
 
@@ -65,8 +75,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     if (response.status === 401) {
       throw new ApiError(401, 'Unauthorized - please login again');
     }
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new ApiError(response.status, error.detail || 'Request failed');
+    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new ApiError(response.status, errorData.detail || 'Request failed');
   }
 
   // Handle empty responses (204 No Content)
@@ -176,5 +186,50 @@ export const api = {
 
   getFileDownloadUrl(path: string): string {
     return `${API_BASE}/me/workspace/download?path=${encodeURIComponent(path)}`;
+  },
+
+  // ============ Billing ============
+
+  async getSubscription(): Promise<SubscriptionResponse> {
+    return request('/me/subscription');
+  },
+
+  async getBillingSummary(): Promise<BillingSummaryResponse> {
+    return request('/me/billing');
+  },
+
+  async getOrders(): Promise<BillingOrdersResponse> {
+    return request('/me/orders');
+  },
+
+  async createCheckout(payload: CheckoutRequest): Promise<CheckoutResponse> {
+    return request('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createPortal(): Promise<BillingPortalResponse> {
+    return request('/billing/portal', {
+      method: 'POST',
+    });
+  },
+
+  async mockCompleteOrder(orderId: string): Promise<{ ok: boolean }> {
+    return request(`/billing/orders/${orderId}/mock/complete`, {
+      method: 'POST',
+    });
+  },
+
+  async mockFailOrder(orderId: string): Promise<{ ok: boolean }> {
+    return request(`/billing/orders/${orderId}/mock/fail`, {
+      method: 'POST',
+    });
+  },
+
+  async mockCancelOrder(orderId: string): Promise<{ ok: boolean }> {
+    return request(`/billing/orders/${orderId}/mock/cancel`, {
+      method: 'POST',
+    });
   },
 };

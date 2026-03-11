@@ -8,6 +8,29 @@ class Plan(StrEnum):
     PAID_PRO = "paid_pro"
 
 
+class SubscriptionStatus(StrEnum):
+    TRIALING = "trialing"
+    ACTIVE = "active"
+    PAST_DUE = "past_due"
+    CANCELED = "canceled"
+    EXPIRED = "expired"
+
+
+class BillingProvider(StrEnum):
+    MOCK = "mock"
+    STRIPE = "stripe"
+    ALIPAY = "alipay"
+    WECHAT = "wechat"
+
+
+class BillingOrderStatus(StrEnum):
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
 class SandboxStatus(StrEnum):
     CREATING = "creating"
     RUNNING = "running"
