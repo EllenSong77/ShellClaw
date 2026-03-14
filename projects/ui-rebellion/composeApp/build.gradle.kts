@@ -30,7 +30,11 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
             }
         }
-        val commonTest by getting
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
     }
 }
 

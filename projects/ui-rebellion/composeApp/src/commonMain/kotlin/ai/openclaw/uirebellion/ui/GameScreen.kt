@@ -3,13 +3,11 @@ package ai.openclaw.uirebellion.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,8 +29,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import ai.openclaw.uirebellion.game.ButtonEnemy
 import ai.openclaw.uirebellion.game.BulletEntity
-import ai.openclaw.uirebellion.game.GameViewModel
 import ai.openclaw.uirebellion.game.GameUiState
+import ai.openclaw.uirebellion.game.GameViewModel
 import ai.openclaw.uirebellion.game.SwitchTrap
 import kotlin.math.roundToInt
 
@@ -49,13 +47,18 @@ fun GameScreen(viewModel: GameViewModel) {
             }
             .padding(12.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            HudCard(uiState)
+        Box(modifier = Modifier.fillMaxSize()) {
+            HudCard(
+                uiState = uiState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+            )
 
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(top = 72.dp, bottom = 124.dp)
             ) {
                 uiState.enemies.forEach { enemy ->
                     EnemyButton(enemy)
@@ -69,34 +72,44 @@ fun GameScreen(viewModel: GameViewModel) {
                 TurretFab(uiState)
             }
 
-            Slider(
-                value = uiState.sliderValue,
-                onValueChange = viewModel::onSliderValueChange,
-                onValueChangeFinished = viewModel::onSliderRelease,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(
-                text = "拖动 Slider 控制炮台；松手发射 Checkbox 子弹；命中 Button +10，打到 Switch -5",
-                color = Color.White,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            Button(
-                onClick = viewModel::restart,
-                modifier = Modifier.padding(top = 8.dp).align(Alignment.End)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
             ) {
-                Text("重开一局")
+                Slider(
+                    value = uiState.sliderValue,
+                    onValueChange = viewModel::onSliderValueChange,
+                    onValueChangeFinished = viewModel::onSliderRelease,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 52.dp)
+                )
+
+                Text(
+                    text = "拖动 Slider 控制炮台；松手发射 Checkbox 子弹；命中 Button +10，打到 Switch -5",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(end = 110.dp)
+                )
+
+                Button(
+                    onClick = viewModel::restart,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                ) {
+                    Text("重开一局")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HudCard(uiState: GameUiState) {
+private fun HudCard(uiState: GameUiState, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        modifier = modifier,
         shape = RoundedCornerShape(16.dp)
     ) {
         Text(
