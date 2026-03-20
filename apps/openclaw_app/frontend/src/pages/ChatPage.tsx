@@ -16,7 +16,7 @@ function StatusIndicator({ status, isStreaming }: { status?: TaskStatus | 'pendi
     return (
       <span className="inline-flex items-center gap-1.5 text-[#60A5FA]">
         <Loader2 className="animate-spin" size={12} />
-        <span className="text-xs font-mono">running</span>
+        <span className="text-xs font-mono">运行中</span>
       </span>
     );
   }
@@ -25,30 +25,35 @@ function StatusIndicator({ status, isStreaming }: { status?: TaskStatus | 'pendi
       return (
         <span className="inline-flex items-center gap-1.5 text-[#FACC15]">
           <Clock size={12} />
-          <span className="text-xs font-mono">pending</span>
+          <span className="text-xs font-mono">排队中</span>
         </span>
       );
     case 'completed':
       return (
         <span className="inline-flex items-center gap-1.5 text-[#4ADE80]">
           <CheckCircle size={12} />
-          <span className="text-xs font-mono">done</span>
+          <span className="text-xs font-mono">已完成</span>
         </span>
       );
     case 'error':
     case 'timeout':
     case 'cancelled':
+      const statusMap: Record<string, string> = {
+        error: '错误',
+        timeout: '超时',
+        cancelled: '已取消',
+      };
       return (
         <span className="inline-flex items-center gap-1.5 text-[#F87171]">
           <XCircle size={12} />
-          <span className="text-xs font-mono">{status}</span>
+          <span className="text-xs font-mono">{statusMap[status] || status}</span>
         </span>
       );
     default:
       return (
         <span className="inline-flex items-center gap-1.5 text-[#6B6B6B]">
           <Clock size={12} />
-          <span className="text-xs font-mono">waiting</span>
+          <span className="text-xs font-mono">等待中</span>
         </span>
       );
   }
@@ -96,7 +101,7 @@ export function ChatPage() {
       const response = await api.createTask({ message });
       enqueuePendingTask(response.task_id);
     } catch (err) {
-      let errorMessage = 'Failed to send message';
+      let errorMessage = '发送消息失败';
       if (err instanceof ApiError) {
         if (typeof err.detail === 'object') {
           setErrorDetail(err.detail);
@@ -139,7 +144,7 @@ export function ChatPage() {
           )}
           <div className="flex flex-col">
             <span className={`text-xs font-bold uppercase tracking-wider ${isUpgradeRequired ? 'text-[#FACC15]' : 'text-[#F87171]'}`}>
-              {errorDetail?.code?.replace(/_/g, ' ') || 'SYSTEM ERROR'}
+              {errorDetail?.code?.replace(/_/g, ' ') || '系统错误'}
             </span>
             <span className="text-xs text-[#A1A1A1] mt-0.5">{error}</span>
           </div>
@@ -151,7 +156,7 @@ export function ChatPage() {
               onClick={() => navigate(errorDetail?.redirect_to || '/account')}
               className="bg-[#22D3EE] hover:bg-[#67E8F9] text-black text-[10px] font-bold px-3 py-1.5 rounded uppercase tracking-wider transition-all active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
             >
-              {errorDetail?.action === 'redeem_code' ? 'Redeem Code' : 'Upgrade Now'}
+              {errorDetail?.action === 'redeem_code' ? '兑换激活码' : '立即升级'}
             </button>
           )}
           <button
@@ -172,21 +177,21 @@ export function ChatPage() {
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-1.5 ${wsConnected ? 'text-[#4ADE80]' : 'text-[#6B6B6B]'}`}>
             {wsConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-            <span className="text-xs font-mono">{wsConnected ? 'connected' : 'offline'}</span>
+            <span className="text-xs font-mono">{wsConnected ? '已连接' : '离线'}</span>
           </div>
           {isStreaming && (
             <span className="text-xs font-mono text-[#60A5FA] flex items-center gap-1">
               <Loader2 className="animate-spin" size={12} />
-              processing...
+              处理中...
             </span>
           )}
         </div>
         {usage && (
           <div className="text-xs font-mono text-[#6B6B6B]">
             {usage.daily_remaining !== null ? (
-              <span>{usage.daily_remaining} left</span>
+              <span>剩余 {usage.daily_remaining} 次</span>
             ) : (
-              <span className="text-[#4ADE80]">unlimited</span>
+              <span className="text-[#4ADE80]">无限制</span>
             )}
           </div>
         )}
@@ -201,11 +206,11 @@ export function ChatPage() {
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center px-4 text-center">
             <Logo size="lg" showText={true} />
-            <p className="text-sm text-[#6B6B6B] mt-3 mb-6">Your terminal AI assistant</p>
+            <p className="text-sm text-[#6B6B6B] mt-3 mb-6">您的终端 AI 助手</p>
 
             <div className="bg-[#141414] border border-[#2A2A2A] rounded-lg p-4 max-w-sm">
               <p className="text-xs text-[#6B6B6B] font-mono mb-2">$ shellclaw --help</p>
-              <p className="text-sm text-[#A1A1A1]">Type a message below to start a task. I can help with code, debugging, and more.</p>
+              <p className="text-sm text-[#A1A1A1]">在下方输入消息开始任务。我可以帮您编写代码、调试等。</p>
             </div>
           </div>
         ) : (
@@ -239,9 +244,9 @@ export function ChatPage() {
                             {msg.content}
                           </ReactMarkdown>
                         ) : msg.isStreaming ? (
-                          <span className="text-[#6B6B6B] font-mono text-sm cursor-blink">thinking</span>
+                          <span className="text-[#6B6B6B] font-mono text-sm cursor-blink">思考中</span>
                         ) : (
-                          <span className="text-[#6B6B6B] text-sm italic">No output</span>
+                          <span className="text-[#6B6B6B] text-sm italic">无输出</span>
                         )}
                       </div>
                     </div>
@@ -264,7 +269,7 @@ export function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a command..."
+              placeholder="输入命令..."
               rows={1}
               className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg pl-7 pr-3 py-2.5 text-sm text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/20 transition-all font-mono resize-none"
               style={{ minHeight: '42px', maxHeight: '100px' }}
@@ -283,7 +288,7 @@ export function ChatPage() {
           </button>
         </form>
         <p className="text-[10px] text-[#4A4A4A] mt-2 text-center font-mono">
-          Enter to send / Shift+Enter for newline
+          Enter 发送 / Shift+Enter 换行
         </p>
       </div>
     </div>

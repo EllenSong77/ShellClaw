@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
           console.error('Failed to fetch sandbox/usage:', err);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Login failed';
+        const message = err instanceof Error ? err.message : '登录失败';
         set({ error: message, isLoading: false, isAuthenticated: false });
         throw err;
       }
@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>()(
           console.error('Failed to fetch sandbox/usage:', err);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Registration failed';
+        const message = err instanceof Error ? err.message : '注册失败';
         set({ error: message, isLoading: false, isAuthenticated: false });
         throw err;
       }

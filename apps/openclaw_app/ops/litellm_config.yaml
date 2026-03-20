@@ -7,4 +7,4 @@ model_list:
 
 litellm_settings:
   drop_params: true
-  success_callback: ["prometheus"]
+  num_retries: 0

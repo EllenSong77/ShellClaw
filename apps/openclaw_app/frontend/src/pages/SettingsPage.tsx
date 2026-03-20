@@ -18,7 +18,7 @@ export function SettingsPage() {
       await api.startSandbox();
       await refreshSandbox();
     } catch (err) {
-      console.error('Failed to start sandbox:', err);
+      console.error('启动沙箱失败:', err);
     } finally {
       setIsStarting(false);
     }
@@ -30,7 +30,7 @@ export function SettingsPage() {
       await api.pauseSandbox();
       await refreshSandbox();
     } catch (err) {
-      console.error('Failed to pause sandbox:', err);
+      console.error('暂停沙箱失败:', err);
     } finally {
       setIsPausing(false);
     }
@@ -42,7 +42,7 @@ export function SettingsPage() {
       await api.stopSandbox();
       await refreshSandbox();
     } catch (err) {
-      console.error('Failed to stop sandbox:', err);
+      console.error('停止沙箱失败:', err);
     } finally {
       setIsStopping(false);
     }
@@ -51,22 +51,27 @@ export function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 pb-20 bg-[#0A0A0A]">
       <div className="max-w-md mx-auto space-y-3">
-        <h2 className="text-lg font-semibold mb-4">Settings</h2>
+        <h2 className="text-lg font-semibold mb-4">设置</h2>
 
         {/* Sandbox Controls */}
         <div className="bg-[#141414] rounded-lg p-5 border border-[#2A2A2A]">
-          <h3 className="text-sm font-semibold mb-4">Sandbox Controls</h3>
+          <h3 className="text-sm font-semibold mb-4">沙箱控制</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Status</p>
+                <p className="text-sm font-medium">状态</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className={`w-2 h-2 rounded-full ${
                     sandbox?.status === 'running' ? 'bg-[#4ADE80]' :
                     sandbox?.status === 'paused' ? 'bg-[#FACC15]' :
                     'bg-[#6B6B6B]'
                   }`} />
-                  <p className="text-xs text-[#A1A1A1] font-mono capitalize">{sandbox?.status || 'unknown'}</p>
+                  <p className="text-xs text-[#A1A1A1] font-mono capitalize">
+                    {sandbox?.status === 'running' ? '运行中' : 
+                     sandbox?.status === 'paused' ? '已暂停' :
+                     sandbox?.status === 'stopped' ? '已停止' :
+                     sandbox?.status || '未知'}
+                  </p>
                 </div>
               </div>
               <button
@@ -79,7 +84,7 @@ export function SettingsPage() {
 
             <div className="border-t border-[#2A2A2A] pt-4">
               <p className="text-xs text-[#6B6B6B] mb-3">
-                Manage your sandbox container
+                管理您的代码沙箱容器
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -88,7 +93,7 @@ export function SettingsPage() {
                   className="flex flex-col items-center gap-1.5 py-2.5 rounded-md transition-all text-xs font-medium bg-[#4ADE80]/5 hover:bg-[#4ADE80]/10 disabled:bg-[#1A1A1A] text-[#4ADE80] disabled:text-[#4A4A4A] border border-[#4ADE80]/20 disabled:border-[#2A2A2A]"
                 >
                   <Play size={16} />
-                  {isStarting ? '...' : 'Start'}
+                  {isStarting ? '...' : '启动'}
                 </button>
                 <button
                   onClick={handlePause}
@@ -96,7 +101,7 @@ export function SettingsPage() {
                   className="flex flex-col items-center gap-1.5 py-2.5 rounded-md transition-all text-xs font-medium bg-[#FACC15]/5 hover:bg-[#FACC15]/10 disabled:bg-[#1A1A1A] text-[#FACC15] disabled:text-[#4A4A4A] border border-[#FACC15]/20 disabled:border-[#2A2A2A]"
                 >
                   <Pause size={16} />
-                  {isPausing ? '...' : 'Pause'}
+                  {isPausing ? '...' : '暂停'}
                 </button>
                 <button
                   onClick={handleStop}
@@ -104,7 +109,7 @@ export function SettingsPage() {
                   className="flex flex-col items-center gap-1.5 py-2.5 rounded-md transition-all text-xs font-medium bg-[#F87171]/5 hover:bg-[#F87171]/10 disabled:bg-[#1A1A1A] text-[#F87171] disabled:text-[#4A4A4A] border border-[#F87171]/20 disabled:border-[#2A2A2A]"
                 >
                   <Square size={16} />
-                  {isStopping ? '...' : 'Stop'}
+                  {isStopping ? '...' : '停止'}
                 </button>
               </div>
             </div>
@@ -113,13 +118,13 @@ export function SettingsPage() {
 
         {/* About */}
         <div className="bg-[#141414] rounded-lg p-5 border border-[#2A2A2A]">
-          <h3 className="text-sm font-semibold mb-3">About</h3>
+          <h3 className="text-sm font-semibold mb-3">关于</h3>
           <div className="flex items-center gap-3 mb-3">
             <Logo size="sm" showText={true} />
             <span className="text-xs text-[#6B6B6B] font-mono">v1.0.0</span>
           </div>
           <p className="text-xs text-[#6B6B6B]">
-            Terminal AI assistant with sandbox code execution.
+            具备沙箱代码执行能力的终端 AI 助手。
           </p>
         </div>
       </div>

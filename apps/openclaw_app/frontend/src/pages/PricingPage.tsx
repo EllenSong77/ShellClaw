@@ -62,8 +62,8 @@ export function PricingPage() {
       <div className="bg-[#111111] border-b border-[#2A2A2A] px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white tracking-tight">Alpha Tiers</h1>
-            <p className="text-xs text-[#6B6B6B] mt-1 font-mono uppercase tracking-widest">Available deployment resources</p>
+            <h1 className="text-xl font-semibold text-white tracking-tight">Alpha 权限等级</h1>
+            <p className="text-xs text-[#6B6B6B] mt-1 font-mono uppercase tracking-widest">可用的部署资源</p>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@ export function PricingPage() {
       <div className="bg-[#22D3EE]/10 border-b border-[#22D3EE]/20 px-4 py-3 text-center">
         <p className="text-[#22D3EE] text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3">
           <Zap size={14} fill="currentColor" />
-          Alpha Access Mode: Use Activation Codes in Account Page to upgrade
+          Alpha 访问模式：请在账户页面使用激活码进行升级
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export function PricingPage() {
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-[#22D3EE] text-black text-[10px] uppercase tracking-[0.2em] font-black px-4 py-1.5 rounded-full flex items-center gap-2">
                     <Zap size={12} fill="currentColor" />
-                    Recommended
+                    推荐
                   </span>
                 </div>
               )}
@@ -116,7 +116,7 @@ export function PricingPage() {
                     <h3 className="text-xl font-black text-white uppercase tracking-tight">{plan.label}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-black text-[#22D3EE] uppercase tracking-[0.2em]">Alpha Tier</span>
+                    <span className="text-xs font-black text-[#22D3EE] uppercase tracking-[0.2em]">Alpha 等级</span>
                   </div>
                 </div>
 
@@ -132,21 +132,21 @@ export function PricingPage() {
                   } disabled:opacity-50 disabled:active:scale-100`}
                 >
                   {plan.plan === subscription?.plan ? (
-                    'Current Tier'
+                    '当前等级'
                   ) : (
                     <>
-                      Redeem Code to Upgrade <ArrowRight size={14} />
+                      使用激活码升级 <ArrowRight size={14} />
                     </>
                   )}
                 </button>
 
                 <div className="space-y-5">
-                  <p className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em]">Tier Features</p>
+                  <p className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em]">等级功能</p>
                   <ul className="space-y-4">
-                    <FeatureItem label={plan.task_limit_daily ? `${plan.task_limit_daily} tasks / day` : 'Unlimited tasks'} />
-                    <FeatureItem label={`${plan.max_concurrency} concurrency limit`} />
-                    <FeatureItem label={`${plan.workspace_limit_mb}MB storage capacity`} />
-                    <FeatureItem label={`${plan.sandbox_timeout_minutes}m session timeout`} />
+                    <FeatureItem label={plan.task_limit_daily ? `每日 ${plan.task_limit_daily} 个任务` : '无限任务'} />
+                    <FeatureItem label={`${plan.max_concurrency} 个并发限制`} />
+                    <FeatureItem label={`${plan.workspace_limit_mb}MB 存储容量`} />
+                    <FeatureItem label={`${plan.sandbox_timeout_minutes} 分钟会话超时`} />
                   </ul>
                 </div>
               </div>
@@ -155,9 +155,9 @@ export function PricingPage() {
         </div>
 
         <p className="text-center text-[10px] font-bold text-[#404040] mt-16 max-w-sm mx-auto leading-relaxed uppercase tracking-[0.2em]">
-          Alpha test access is currently by invitation only.
+          Alpha 测试访问目前仅限受邀用户。
           <br />
-          Contact support for internal access codes.
+          请联系支持人员获取内部激活码。
         </p>
       </div>
     </div>

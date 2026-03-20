@@ -86,9 +86,37 @@ class DockerSandboxManager:
                 continue
         raise NotFound("sandbox container not found")
 
+    def _container_matches_settings(self, container, user_key: str) -> bool:
+        container.reload()
+        attrs = getattr(container, 'attrs', {}) or {}
+        config = attrs.get('Config', {}) or {}
+        env_list = config.get('Env', []) or []
+        env_map: dict[str, str] = {}
+        for item in env_list:
+            if '=' not in item:
+                continue
+            key, value = item.split('=', 1)
+            env_map[key] = value
+
+        expected = self._sandbox_env(user_key)
+        for key in ('OPENCLAW_TASK_MODE', 'LITELLM_BASE_URL', 'HOME', 'OPENCLAW_HOME_SEED'):
+            if env_map.get(key) != expected.get(key):
+                return False
+
+        return container.name == self._container_name(user_key)
+
+    def _recreate_container(self, container, user_key: str) -> DockerSandboxResult:
+        try:
+            container.remove(force=True)
+        except DockerException:
+            pass
+        return self._create_container(user_key, self._container_name(user_key))
+
     def ensure_running(self, user_key: str) -> DockerSandboxResult:
         try:
             container = self._get_container(user_key)
+            if not self._container_matches_settings(container, user_key):
+                return self._recreate_container(container, user_key)
             container.reload()
             status = container.status
             if status == "paused":

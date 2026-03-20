@@ -27,17 +27,17 @@ export function RegisterPage() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('两次输入的密码不一致');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('密码长度至少为 6 位');
       return;
     }
 
     if (accessConfig?.activation_required && !activationCode) {
-      setError('Activation code is required');
+      setError('请输入激活码');
       return;
     }
 
@@ -47,7 +47,7 @@ export function RegisterPage() {
       await register(email, password, activationCode);
       navigate('/chat', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(err instanceof Error ? err.message : '注册失败');
     } finally {
       setIsLoading(false);
     }
@@ -61,29 +61,29 @@ export function RegisterPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <Logo size="lg" showText={true} />
-          <p className="text-[#6B6B6B] mt-2 text-sm">Terminal AI Assistant</p>
+          <p className="text-[#6B6B6B] mt-2 text-sm">终端 AI 助手</p>
         </div>
 
         {/* Banner */}
         {isActivationRequired ? (
           <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-md px-4 py-3 mb-4 text-center">
-            <p className="text-[#22D3EE] text-sm font-medium">Alpha Access Only</p>
-            <p className="text-[#6B6B6B] text-xs mt-0.5">Activation code required to register</p>
+            <p className="text-[#22D3EE] text-sm font-medium">仅限内测访问</p>
+            <p className="text-[#6B6B6B] text-xs mt-0.5">需要激活码即可注册</p>
           </div>
         ) : (
           <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-md px-4 py-3 mb-4 text-center">
-            <p className="text-[#22D3EE] text-sm font-medium">Internal Alpha Test</p>
-            <p className="text-[#6B6B6B] text-xs mt-0.5">Early access for invited users</p>
+            <p className="text-[#22D3EE] text-sm font-medium">内部 Alpha 测试</p>
+            <p className="text-[#6B6B6B] text-xs mt-0.5">受邀用户的早期访问</p>
           </div>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-[#141414] rounded-lg p-6 border border-[#2A2A2A]">
-          <h2 className="text-lg font-semibold mb-5">Create account</h2>
+          <h2 className="text-lg font-semibold mb-5">创建账号</h2>
 
           {error && (
             <div className="bg-[#F87171]/10 border border-[#F87171]/20 text-[#F87171] px-4 py-2.5 rounded-md mb-4 text-sm font-mono">
-              <span className="text-[#F87171]/60 mr-2">[error]</span>
+              <span className="text-[#F87171]/60 mr-2">[错误]</span>
               {error}
             </div>
           )}
@@ -91,7 +91,7 @@ export function RegisterPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                Email
+                邮箱
               </label>
               <input
                 type="email"
@@ -106,7 +106,7 @@ export function RegisterPage() {
 
             <div>
               <label htmlFor="password" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                Password
+                密码
               </label>
               <input
                 type="password"
@@ -116,13 +116,13 @@ export function RegisterPage() {
                 required
                 minLength={6}
                 className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/30 transition-all text-sm"
-                placeholder="Min. 6 characters"
+                placeholder="至少 6 位字符"
               />
             </div>
 
             <div>
               <label htmlFor="confirmPassword" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                Confirm Password
+                确认密码
               </label>
               <input
                 type="password"
@@ -131,13 +131,13 @@ export function RegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/30 transition-all text-sm"
-                placeholder="Confirm password"
+                placeholder="请再次输入密码"
               />
             </div>
 
             <div>
               <label htmlFor="activationCode" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                {isActivationRequired ? 'Activation Code' : 'Activation Code (Optional)'}
+                {isActivationRequired ? '激活码' : '激活码 (可选)'}
               </label>
               <input
                 type="text"
@@ -158,24 +158,24 @@ export function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="animate-spin mr-2" size={16} />
-                  Creating account...
+                  账号创建中...
                 </>
               ) : (
-                'Create account'
+                '创建账号'
               )}
             </button>
           </div>
 
           <div className="mt-5 text-center text-[#6B6B6B] text-sm">
-            Have an account?{' '}
+            已有账号?{' '}
             <Link to="/login" className="text-[#22D3EE] hover:text-[#06B6D4] font-medium">
-              Sign in
+              立即登录
             </Link>
           </div>
         </form>
 
         <p className="mt-4 text-center text-[#4A4A4A] text-xs">
-          By registering, you agree to our Terms and Privacy Policy
+          注册即表示您同意我们的服务条款和隐私政策
         </p>
       </div>
     </div>

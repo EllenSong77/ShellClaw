@@ -54,7 +54,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const assistantMessage: Message = {
         id: taskId,
         role: 'assistant',
-        content: 'Task queued...',
+        content: '任务排队中...',
         taskId,
         status: 'pending',
         isStreaming: true,
@@ -97,7 +97,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     ...msg,
                     status: 'running',
                     isStreaming: true,
-                    content: 'Running...',
+                    content: '正在运行...',
                   }
                 : msg
             ),
@@ -114,29 +114,37 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         if (event.task_id) {
           set((state) => ({
             isStreaming: false,
-            currentTaskId: null,
+            // We keep currentTaskId for a bit to allow polling to finish if needed
+            // currentTaskId: null, 
             messages: state.messages.map((msg) =>
               msg.taskId === event.task_id
                 ? {
                     ...msg,
                     status: 'completed',
                     isStreaming: false,
-                    content: event.stdout_text || msg.content || 'Task completed',
+                    content: event.stdout_text || event.content || msg.content || '任务已完成',
                   }
                 : msg
             ),
           }));
+          
+          // Clear currentTaskId after a short delay
+          setTimeout(() => {
+            if (get().currentTaskId === event.task_id) {
+              set({ currentTaskId: null });
+            }
+          }, 2000);
         }
         break;
 
       case 'task_error':
         // Task failed with error
         if (event.task_id) {
-          const errorContent = event.error_text || event.stderr_text || event.stdout_text || 'Task failed';
+          const errorContent = event.error_text || event.stderr_text || event.stdout_text || event.content || '任务失败';
           const errorStatus = event.status === 'timeout' ? 'timeout' : 'error';
           set((state) => ({
             isStreaming: false,
-            currentTaskId: null,
+            // currentTaskId: null,
             error: errorContent,
             messages: state.messages.map((msg) =>
               msg.taskId === event.task_id
@@ -149,6 +157,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 : msg
             ),
           }));
+
+          // Clear currentTaskId after a short delay
+          setTimeout(() => {
+            if (get().currentTaskId === event.task_id) {
+              set({ currentTaskId: null });
+            }
+          }, 2000);
         }
         break;
     }

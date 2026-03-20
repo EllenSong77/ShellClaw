@@ -25,7 +25,7 @@ export function LoginPage() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : '登录失败');
     } finally {
       setIsLoading(false);
     }
@@ -37,16 +37,16 @@ export function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <Logo size="lg" showText={true} />
-          <p className="text-[#6B6B6B] mt-2 text-sm">Terminal AI Assistant</p>
+          <p className="text-[#6B6B6B] mt-2 text-sm">终端 AI 助手</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-[#141414] rounded-lg p-6 border border-[#2A2A2A]">
-          <h2 className="text-lg font-semibold mb-5">Sign in</h2>
+          <h2 className="text-lg font-semibold mb-5">登录</h2>
 
           {error && (
             <div className="bg-[#F87171]/10 border border-[#F87171]/20 text-[#F87171] px-4 py-2.5 rounded-md mb-4 text-sm font-mono">
-              <span className="text-[#F87171]/60 mr-2">[error]</span>
+              <span className="text-[#F87171]/60 mr-2">[错误]</span>
               {error}
             </div>
           )}
@@ -54,7 +54,7 @@ export function LoginPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                Email
+                邮箱
               </label>
               <input
                 type="email"
@@ -69,7 +69,7 @@ export function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
-                Password
+                密码
               </label>
               <input
                 type="password"
@@ -78,7 +78,7 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/30 transition-all text-sm"
-                placeholder="Enter password"
+                placeholder="请输入密码"
               />
             </div>
 
@@ -90,18 +90,18 @@ export function LoginPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="animate-spin mr-2" size={16} />
-                  Signing in...
+                  登录中...
                 </>
               ) : (
-                'Sign in'
+                '登录'
               )}
             </button>
           </div>
 
           <div className="mt-5 text-center text-[#6B6B6B] text-sm">
-            No account?{' '}
+            没有账号?{' '}
             <Link to="/register" className="text-[#22D3EE] hover:text-[#06B6D4] font-medium">
-              Create one
+              立即创建
             </Link>
           </div>
         </form>

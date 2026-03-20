@@ -67,7 +67,7 @@ export function TaskDetailPage() {
           onClick={() => navigate('/chat')}
           className="px-4 py-2 bg-[#141414] hover:bg-[#1A1A1A] rounded-md border border-[#2A2A2A] text-sm"
         >
-          Back to Chat
+          返回对话
         </button>
       </div>
     );
@@ -88,11 +88,15 @@ export function TaskDetailPage() {
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-medium">Task Details</h1>
+          <h1 className="text-sm font-medium">任务详情</h1>
           <p className="text-xs text-[#6B6B6B] font-mono truncate">{task.id}</p>
         </div>
         <div className={`px-2 py-1 rounded text-xs font-mono capitalize ${STATUS_COLORS[task.status || 'running']}`}>
-          {task.status || 'running'}
+          {task.status === 'running' ? '运行中' : 
+           task.status === 'completed' ? '已完成' :
+           task.status === 'timeout' ? '超时' :
+           task.status === 'error' ? '错误' :
+           task.status === 'cancelled' ? '已取消' : task.status}
         </div>
       </div>
 
@@ -104,28 +108,28 @@ export function TaskDetailPage() {
             <div className="bg-[#141414] rounded-md p-3 border border-[#2A2A2A]">
               <div className="flex items-center gap-1.5 text-[#6B6B6B] text-xs mb-1">
                 <Clock size={12} />
-                <span>Duration</span>
+                <span>耗时</span>
               </div>
-              <p className="text-sm font-mono">{task.duration_sec ? `${task.duration_sec}s` : '—'}</p>
+              <p className="text-sm font-mono">{task.duration_sec ? `${task.duration_sec}秒` : '—'}</p>
             </div>
             <div className="bg-[#141414] rounded-md p-3 border border-[#2A2A2A]">
               <div className="flex items-center gap-1.5 text-[#6B6B6B] text-xs mb-1">
                 <Cpu size={12} />
-                <span>LLM Calls</span>
+                <span>模型调用</span>
               </div>
               <p className="text-sm font-mono">{task.llm_calls}</p>
             </div>
             <div className="bg-[#141414] rounded-md p-3 border border-[#2A2A2A]">
               <div className="flex items-center gap-1.5 text-[#6B6B6B] text-xs mb-1">
                 <FileText size={12} />
-                <span>Input</span>
+                <span>输入 Token</span>
               </div>
               <p className="text-sm font-mono">{task.input_tokens.toLocaleString()}</p>
             </div>
             <div className="bg-[#141414] rounded-md p-3 border border-[#2A2A2A]">
               <div className="flex items-center gap-1.5 text-[#6B6B6B] text-xs mb-1">
                 <FileText size={12} />
-                <span>Output</span>
+                <span>输出 Token</span>
               </div>
               <p className="text-sm font-mono">{task.output_tokens.toLocaleString()}</p>
             </div>
@@ -135,12 +139,12 @@ export function TaskDetailPage() {
           <div className="bg-[#141414] rounded-md p-3 border border-[#2A2A2A]">
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
-                <span className="text-[#6B6B6B]">Started:</span>
+                <span className="text-[#6B6B6B]">开始时间:</span>
                 <span className="ml-2 font-mono">{formatDate(task.started_at)}</span>
               </div>
               {task.ended_at && (
                 <div>
-                  <span className="text-[#6B6B6B]">Ended:</span>
+                  <span className="text-[#6B6B6B]">结束时间:</span>
                   <span className="ml-2 font-mono">{formatDate(task.ended_at)}</span>
                 </div>
               )}
@@ -160,7 +164,7 @@ export function TaskDetailPage() {
                       : 'text-[#6B6B6B] hover:text-[#A1A1A1] hover:bg-[#1A1A1A]/50'
                   }`}
                 >
-                  {tab}
+                  {tab === 'stdout' ? '标准输出' : tab === 'stderr' ? '错误流' : '错误详情'}
                   {tab === 'error' && task.error_text && (
                     <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 bg-[#F87171] text-white text-[10px] rounded">
                       !
@@ -178,7 +182,7 @@ export function TaskDetailPage() {
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">no output</p>
+                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">无输出</p>
                 )
               )}
               {activeTab === 'stderr' && (
@@ -187,7 +191,7 @@ export function TaskDetailPage() {
                     {task.stderr_text}
                   </pre>
                 ) : (
-                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">no stderr</p>
+                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">无错误流输出</p>
                 )
               )}
               {activeTab === 'error' && (
@@ -196,7 +200,7 @@ export function TaskDetailPage() {
                     {task.error_text}
                   </pre>
                 ) : (
-                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">no errors</p>
+                  <p className="text-[#4A4A4A] text-center py-8 text-sm font-mono">无错误详情</p>
                 )
               )}
             </div>

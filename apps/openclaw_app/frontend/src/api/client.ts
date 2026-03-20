@@ -46,7 +46,7 @@ export class ApiError extends Error {
   detail: ApiErrorDetail | string;
 
   constructor(status: number, detail: ApiErrorDetail | string) {
-    const message = typeof detail === 'string' ? detail : detail.message || 'Request failed';
+    const message = typeof detail === 'string' ? detail : detail.message || '请求失败';
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -68,16 +68,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
+    cache: 'no-store',
     headers,
   });
 
   if (!response.ok) {
     // Handle 401 - token expired or invalid
     if (response.status === 401) {
-      throw new ApiError(401, 'Unauthorized - please login again');
+      throw new ApiError(401, '登录失效，请重新登录');
     }
-    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new ApiError(response.status, errorData.detail || 'Request failed');
+    const errorData = await response.json().catch(() => ({ detail: '未知错误' }));
+    throw new ApiError(response.status, errorData.detail || '请求失败');
   }
 
   // Handle empty responses (204 No Content)
@@ -182,8 +183,8 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
-      throw new ApiError(response.status, error.detail || 'Upload failed');
+      const error = await response.json().catch(() => ({ detail: '上传失败' }));
+      throw new ApiError(response.status, error.detail || '上传失败');
     }
 
     return response.json();

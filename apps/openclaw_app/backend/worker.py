@@ -52,6 +52,38 @@ def publish_task_progress(redis_client: Redis, user_id: str, task_id: str, event
     )
 
 
+def read_event_chunks(events_path: Path) -> tuple[str, str]:
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    if not events_path.exists():
+        return "", ""
+
+    with events_path.open('r', encoding='utf-8') as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            chunk = event.get('chunk')
+            if not isinstance(chunk, str):
+                continue
+            if event.get('stream') == 'stderr':
+                stderr_chunks.append(chunk)
+            else:
+                stdout_chunks.append(chunk)
+    return ''.join(stdout_chunks), ''.join(stderr_chunks)
+
+
+def detect_rate_limit(stdout_text: str, stderr_text: str) -> str | None:
+    haystack = f"{stdout_text}\n{stderr_text}".lower()
+    if 'rate limit' not in haystack and '速率限制' not in haystack and '429' not in haystack:
+        return None
+    return '模型请求触发速率限制，请稍后重试。'
+
+
 def wait_for_result(redis_client: Redis, user_id: str, task_id: str, timeout: int = 30) -> dict:
     root = workspace_dir(user_id)
     outbox = root / 'outbox'
@@ -76,13 +108,15 @@ def wait_for_result(redis_client: Redis, user_id: str, task_id: str, timeout: in
             events_path.unlink(missing_ok=True)
             return data
         time.sleep(1)
+    stdout_text, stderr_text = read_event_chunks(events_path)
+    rate_limit_message = detect_rate_limit(stdout_text, stderr_text)
     events_path.unlink(missing_ok=True)
     return {
         'task_id': task_id,
-        'status': 'timeout',
-        'error': 'worker wait timeout',
-        'stdout': '',
-        'stderr': '',
+        'status': 'error' if rate_limit_message else 'timeout',
+        'error': rate_limit_message or 'worker wait timeout',
+        'stdout': stdout_text,
+        'stderr': stderr_text,
         'return_code': None,
     }
 
@@ -119,8 +153,8 @@ def handle_payload(redis_client: Redis, payload_text: str):
     )
 
     write_task_to_sandbox(user_id, payload)
-    timeout_sec = int(payload.get('timeout_sec') or 30)
-    result = wait_for_result(redis_client, user_id, task_id, timeout=max(30, timeout_sec + 15))
+    timeout_sec = int(payload.get('timeout_sec') or 120)
+    result = wait_for_result(redis_client, user_id, task_id, timeout=max(120, timeout_sec + 90))
 
     db = SessionLocal()
     try:

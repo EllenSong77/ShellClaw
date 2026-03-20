@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from mimetypes import guess_type
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from redis import Redis
@@ -79,7 +79,7 @@ router = APIRouter()
 class TaskCreateRequest(BaseModel):
     message: str
     command: str | list[str] | None = None
-    timeout_sec: int | None = None
+    timeout_sec: int | None = 120
 
 
 def redis_client() -> Redis:
@@ -441,7 +441,10 @@ def stop_sandbox(db: Session = Depends(get_db), current_user: User = Depends(get
 
 
 @router.get('/tasks/{task_id}', response_model=TaskResponse)
-def get_task(task_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_task(task_id: str, response: Response, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == current_user.id).one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail='任务不存在')
@@ -450,10 +453,14 @@ def get_task(task_id: str, db: Session = Depends(get_db), current_user: User = D
 
 @router.get('/me/tasks', response_model=TaskListResponse)
 def list_my_tasks(
+    response: Response,
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     items = (
         db.query(Task)
         .filter(Task.user_id == current_user.id)

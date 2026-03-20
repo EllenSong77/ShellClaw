@@ -7,9 +7,9 @@ export function Layout() {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-[#FAFAFA] flex flex-col">
+    <div className="h-screen bg-[#0A0A0A] text-[#FAFAFA] flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-[#111111] border-b border-[#2A2A2A] px-4 py-3 flex items-center justify-between">
+      <header className="shrink-0 bg-[#111111] border-b border-[#2A2A2A] px-4 py-3 flex items-center justify-between z-10">
         <Logo size="sm" />
         {user && (
           <div className="text-sm text-[#6B6B6B] font-mono">
@@ -19,13 +19,13 @@ export function Layout() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden relative">
         <Outlet />
       </main>
 
       {/* Bottom navigation */}
-      <nav className="bg-[#111111] border-t border-[#2A2A2A] safe-area-pb">
-        <div className="flex justify-around py-1">
+      <nav className="shrink-0 bg-[#111111] border-t border-[#2A2A2A] safe-area-pb z-10">
+        <div className="max-w-md mx-auto flex justify-around py-1">
           <NavLink
             to="/chat"
             className={({ isActive }) =>
@@ -37,7 +37,7 @@ export function Layout() {
             }
           >
             <MessageSquare size={22} />
-            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">Chat</span>
+            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">对话</span>
           </NavLink>
           <NavLink
             to="/workspace"
@@ -50,7 +50,7 @@ export function Layout() {
             }
           >
             <FolderOpen size={22} />
-            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">Files</span>
+            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">文件</span>
           </NavLink>
           <NavLink
             to="/account"
@@ -63,7 +63,7 @@ export function Layout() {
             }
           >
             <User size={22} />
-            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">Account</span>
+            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">账户</span>
           </NavLink>
           <NavLink
             to="/settings"
@@ -76,7 +76,7 @@ export function Layout() {
             }
           >
             <Settings size={22} />
-            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">Settings</span>
+            <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">设置</span>
           </NavLink>
         </div>
       </nav>

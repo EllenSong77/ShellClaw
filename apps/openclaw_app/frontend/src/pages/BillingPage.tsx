@@ -7,18 +7,18 @@ import { api, ApiError } from '../api/client';
 import type { BillingOrderResponse, BillingOrderStatus } from '../types';
 
 const STATUS_CONFIG: Record<BillingOrderStatus, { label: string; color: string; icon: ComponentType<LucideProps>; bg: string }> = {
-  pending: { label: 'Processing', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
-  paid: { label: 'Activated', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
-  failed: { label: 'Failed', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
-  cancelled: { label: 'Voided', color: 'text-gray-500', bg: 'bg-gray-500/10', icon: XCircle },
-  refunded: { label: 'Revoked', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: DollarSign },
+  pending: { label: '处理中', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
+  paid: { label: '已激活', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
+  failed: { label: '失败', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
+  cancelled: { label: '已作废', color: 'text-gray-500', bg: 'bg-gray-500/10', icon: XCircle },
+  refunded: { label: '已收回', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: DollarSign },
 };
 
 const PLAN_LABELS: Record<string, string> = {
-  trial: 'Alpha Trial Activation',
-  free: 'Alpha Free Activation',
-  paid_personal: 'Personal Alpha Activation',
-  paid_pro: 'Pro Alpha Activation',
+  trial: 'Alpha 测试版激活',
+  free: 'Alpha 免费版激活',
+  paid_personal: '个人专业版 (Alpha) 激活',
+  paid_pro: '团队专业版 (Alpha) 激活',
 };
 
 export function BillingPage() {
@@ -42,7 +42,7 @@ export function BillingPage() {
       const response = await api.getOrders();
       setOrders(response.items || []);
     } catch (err) {
-      let message = 'Access Denied: Failed to fetch transaction ledger';
+      let message = '访问被拒绝：无法获取交易记录';
       if (err instanceof ApiError) {
         message = typeof err.detail === 'object' ? err.detail.message || message : err.detail;
       }
@@ -53,9 +53,9 @@ export function BillingPage() {
   };
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short',
+    if (!dateStr) return '无';
+    return new Date(dateStr).toLocaleString('zh-CN', {
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
@@ -76,8 +76,8 @@ export function BillingPage() {
             <ChevronLeft size={20} className="text-[#6B6B6B]" />
           </button>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight uppercase">Redemption Logs</h1>
-            <p className="text-[9px] text-[#404040] uppercase font-black tracking-[0.2em]">Activation History</p>
+            <h1 className="text-lg font-black text-white tracking-tight uppercase">兑换日志</h1>
+            <p className="text-[9px] text-[#404040] uppercase font-black tracking-[0.2em]">激活历史</p>
           </div>
         </div>
       </div>
@@ -90,8 +90,8 @@ export function BillingPage() {
               <CheckCircle size={24} />
             </div>
             <div>
-              <p className="text-sm font-black text-white uppercase tracking-tight">Activation Successful</p>
-              <p className="text-xs text-green-500/70 font-medium">Your account tier has been updated and propagated system-wide.</p>
+              <p className="text-sm font-black text-white uppercase tracking-tight">激活成功</p>
+              <p className="text-xs text-green-500/70 font-medium">您的账户等级已更新，并已同步至全系统。</p>
             </div>
           </div>
         )}
@@ -107,7 +107,7 @@ export function BillingPage() {
               onClick={fetchOrders} 
               className="text-[10px] font-black text-red-500 bg-red-500/10 px-4 py-2 rounded-lg hover:bg-red-500/20 transition-all uppercase tracking-[0.1em] border border-red-500/10"
             >
-              Retry
+              重试
             </button>
           </div>
         )}
@@ -116,7 +116,7 @@ export function BillingPage() {
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-40">
             <Loader2 className="animate-spin text-[#22D3EE] mb-6" size={40} />
-            <p className="text-[10px] font-black text-[#404040] uppercase tracking-[0.3em] animate-pulse">Syncing Blockchain Records</p>
+            <p className="text-[10px] font-black text-[#404040] uppercase tracking-[0.3em] animate-pulse">正在同步历史记录</p>
           </div>
         )}
 
@@ -126,13 +126,13 @@ export function BillingPage() {
             <div className="w-24 h-24 bg-[#1A1A1A] rounded-3xl flex items-center justify-center mb-8 border border-[#1F1F1F] shadow-xl">
               <FileText size={40} className="text-[#262626]" />
             </div>
-            <p className="text-white font-black text-lg uppercase tracking-tight mb-3">No Records Found</p>
-            <p className="text-xs text-[#404040] mb-10 text-center max-w-[280px] font-medium leading-relaxed uppercase tracking-wider">The activation history for this account is currently empty. Redeem a code in the account page to see records here.</p>
+            <p className="text-white font-black text-lg uppercase tracking-tight mb-3">未找到记录</p>
+            <p className="text-xs text-[#404040] mb-10 text-center max-w-[280px] font-medium leading-relaxed uppercase tracking-wider">该账户目前的激活历史为空。在账户页面兑换激活码后，您将在这里看到记录。</p>
             <button
               onClick={() => navigate('/account')}
               className="px-8 py-3 bg-[#22D3EE] hover:bg-[#67E8F9] text-black rounded-xl text-xs font-black uppercase tracking-[0.2em] transition-all active:scale-95 shadow-[0_10px_20px_rgba(34,211,238,0.2)]"
             >
-              Go to Account
+              前往账户
             </button>
           </div>
         )}
@@ -161,9 +161,9 @@ export function BillingPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-6 pt-6 border-t border-[#1F1F1F]">
-                      <MetaItem label="Initiated At" value={formatDate(order.created_at)} icon={Calendar} />
+                      <MetaItem label="发起时间" value={formatDate(order.created_at)} icon={Calendar} />
                       <MetaItem 
-                        label={order.status === 'paid' ? "Finalized At" : order.status === 'cancelled' ? 'Terminated At' : 'Target Date'} 
+                        label={order.status === 'paid' ? "激活时间" : order.status === 'cancelled' ? '终止时间' : '处理时间'} 
                         value={formatDate(order.paid_at || order.cancelled_at || null)} 
                         icon={order.status === 'paid' ? DollarSign : Clock}
                         active={!!(order.paid_at || order.cancelled_at)}
@@ -183,7 +183,7 @@ export function BillingPage() {
 
                     <div className="flex items-center gap-2 text-[9px] font-black text-[#404040] uppercase tracking-widest">
                       <Zap size={12} />
-                      ALPHA ACCESS
+                      ALPHA 访问权限
                     </div>
                   </div>
                 </div>

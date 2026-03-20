@@ -6,10 +6,10 @@ import { api, ApiError } from '../api/client';
 import type { BillingSummaryResponse } from '../types';
 
 const PLAN_NAMES: Record<string, string> = {
-  trial: 'Alpha Trial',
-  free: 'Alpha Free',
-  paid_personal: 'Personal Alpha',
-  paid_pro: 'Pro Alpha',
+  trial: 'Alpha 测试版',
+  free: 'Alpha 免费版',
+  paid_personal: '个人专业版 (Alpha)',
+  paid_pro: '团队专业版 (Alpha)',
 };
 
 export function AccountPage() {
@@ -61,14 +61,14 @@ export function AccountPage() {
 
     try {
       const response = await api.redeemCode(redeemCode.trim());
-      setRedeemStatus({ type: 'success', message: response.message || 'Code redeemed successfully!' });
+      setRedeemStatus({ type: 'success', message: response.message || '激活码兑换成功！' });
       setRedeemCode('');
       // Refresh all data
       fetchBillingSummary();
       refreshUser();
       refreshUsage();
     } catch (err) {
-      let message = 'Failed to redeem code';
+      let message = '兑换激活码失败';
       if (err instanceof ApiError) {
         message = typeof err.detail === 'object' ? err.detail.message || message : err.detail;
       }
@@ -79,10 +79,10 @@ export function AccountPage() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return '无';
+    return new Date(dateString).toLocaleDateString('zh-CN', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
     });
   };
@@ -138,17 +138,17 @@ export function AccountPage() {
 
           <div className="grid grid-cols-2 gap-3 relative">
             <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#262626] flex flex-col items-center text-center">
-              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">Alpha Status</p>
+              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">Alpha 状态</p>
               <div className="flex items-center gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full ${subStatus === 'active' ? 'bg-[#4ADE80]' : 'bg-red-500'}`} />
-                <span className="text-xs font-black uppercase tracking-tight text-white">{subStatus === 'active' ? 'Activated' : 'Inactive'}</span>
+                <span className="text-xs font-black uppercase tracking-tight text-white">{subStatus === 'active' ? '已激活' : '未激活'}</span>
               </div>
             </div>
             <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#262626] flex flex-col items-center text-center">
-              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">Quota Type</p>
+              <p className="text-[#404040] text-[9px] uppercase tracking-widest font-black mb-2">配额类型</p>
               <div className="flex items-center gap-2">
                 {isPaid ? <ShieldCheck size={12} className="text-[#4ADE80]" /> : <AlertCircle size={12} className="text-red-500" />}
-                <span className="text-xs font-black uppercase tracking-tight text-white">{isPaid ? 'Premium' : 'Standard'}</span>
+                <span className="text-xs font-black uppercase tracking-tight text-white">{isPaid ? '专业版' : '标准版'}</span>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export function AccountPage() {
         <div className="bg-[#141414] rounded-2xl p-6 border border-[#22D3EE]/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]">
           <h3 className="text-[10px] font-black text-[#22D3EE] uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
             <Zap size={12} fill="currentColor" />
-            Redeem Activation Code
+            兑换激活码
           </h3>
           
           <form onSubmit={handleRedeem} className="space-y-4">
@@ -175,7 +175,7 @@ export function AccountPage() {
                 disabled={!redeemCode.trim() || isRedeeming}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#22D3EE] hover:bg-[#67E8F9] disabled:bg-[#262626] disabled:text-[#404040] text-black px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
               >
-                {isRedeeming ? <Loader2 size={14} className="animate-spin" /> : 'Redeem'}
+                {isRedeeming ? <Loader2 size={14} className="animate-spin" /> : '兑换'}
               </button>
             </div>
             
@@ -189,7 +189,7 @@ export function AccountPage() {
             )}
           </form>
           <p className="mt-3 text-[#404040] text-[9px] uppercase tracking-widest leading-relaxed">
-            Enter your Alpha access code to upgrade your account and unlock more resources.
+            输入您的 Alpha 访问码以升级您的账户并解锁更多资源。
           </p>
         </div>
 
@@ -197,16 +197,16 @@ export function AccountPage() {
         <div className="bg-[#141414] rounded-2xl p-6 border border-[#1F1F1F]">
           <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
             <CreditCard size={12} />
-            Activation Details
+            激活详情
           </h3>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">Joined Alpha</span>
+              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">加入 Alpha</span>
               <span className="text-[11px] font-black font-mono text-white">{formatDate(subscription?.subscription_started_at || null)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">Access Expires</span>
+              <span className="text-[11px] font-bold text-[#404040] uppercase tracking-wider">访问截止</span>
               <span className="text-[11px] font-black font-mono text-white">{formatDate(subscription?.current_period_ends_at || null)}</span>
             </div>
           </div>
@@ -218,7 +218,7 @@ export function AccountPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] flex items-center gap-2">
                 <FileText size={12} />
-                Redemption History
+                兑换记录
               </h3>
             </div>
             <div className="space-y-3">
@@ -229,7 +229,7 @@ export function AccountPage() {
                     <p className="text-[9px] text-[#404040] font-mono">{formatDate(order.created_at)}</p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${order.status === 'paid' ? 'text-green-500' : 'text-yellow-500'}`}>{order.status}</p>
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${order.status === 'paid' ? 'text-green-500' : 'text-yellow-500'}`}>{order.status === 'paid' ? '已支付' : '待处理'}</p>
                   </div>
                 </div>
               ))}
@@ -239,11 +239,11 @@ export function AccountPage() {
 
         {/* Usage Card */}
         <div className="bg-[#141414] rounded-2xl p-6 border border-[#1F1F1F]">
-          <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] mb-6">Resource Usage</h3>
+          <h3 className="text-[10px] font-black text-[#404040] uppercase tracking-[0.2em] mb-6">资源使用情况</h3>
           <div className="space-y-6">
             <div>
               <div className="flex justify-between text-[11px] mb-2 font-bold">
-                <span className="text-[#6B6B6B] uppercase tracking-wider">Tasks</span>
+                <span className="text-[#6B6B6B] uppercase tracking-wider">任务</span>
                 <span className="text-white font-mono">{dailyUsed} / {dailyLimit || '∞'}</span>
               </div>
               <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden border border-[#262626] p-0.5">
@@ -258,7 +258,7 @@ export function AccountPage() {
               <div className="flex items-center gap-4">
                 <Database size={20} className="text-[#22D3EE]" />
                 <div>
-                  <p className="text-[10px] font-black text-[#404040] uppercase tracking-widest mb-0.5">Workspace</p>
+                  <p className="text-[10px] font-black text-[#404040] uppercase tracking-widest mb-0.5">工作空间</p>
                   <p className="text-sm font-black text-white font-mono">{sandbox?.workspace_size_mb || 0} MB</p>
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function AccountPage() {
           className="w-full bg-[#141414] hover:bg-red-500/5 text-[#404040] hover:text-red-500 rounded-2xl p-4 flex items-center justify-center gap-3 transition-all border border-[#1F1F1F] hover:border-red-500/20 text-xs font-black uppercase tracking-[0.2em] active:scale-[0.99]"
         >
           <LogOut size={16} />
-          Sign Out
+          退出登录
         </button>
       </div>
     </div>

@@ -78,7 +78,7 @@ export function WorkspacePage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Folder className="text-[#22D3EE]" size={20} />
-            <h1 className="text-lg font-semibold">Files</h1>
+            <h1 className="text-lg font-semibold">文件</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -94,7 +94,7 @@ export function WorkspacePage() {
               ) : (
                 <Upload size={16} />
               )}
-              <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+              <span>{isUploading ? '上传中...' : '上传文件'}</span>
               <input
                 type="file"
                 className="hidden"
@@ -108,10 +108,10 @@ export function WorkspacePage() {
         {/* Error */}
         {error && (
           <div className="bg-[#F87171]/5 border border-[#F87171]/20 text-[#F87171] px-4 py-2.5 rounded-md mb-4 text-sm font-mono">
-            <span className="text-[#F87171]/60 mr-2">[error]</span>
+            <span className="text-[#F87171]/60 mr-2">[错误]</span>
             {error}
             <button onClick={() => setError(null)} className="ml-3 underline hover:text-[#FCA5A5] text-xs">
-              dismiss
+              忽略
             </button>
           </div>
         )}
@@ -124,7 +124,7 @@ export function WorkspacePage() {
             onClick={() => fetchWorkspace('')}
             className="text-[#A1A1A1] hover:text-[#FAFAFA]"
           >
-            workspace
+            工作空间
           </button>
           {currentPath && currentPath.split('/').filter(Boolean).map((part, index, arr) => {
             const path = arr.slice(0, index + 1).join('/');
@@ -153,8 +153,8 @@ export function WorkspacePage() {
               <div className="w-12 h-12 bg-[#1A1A1A] rounded-lg flex items-center justify-center mx-auto mb-3">
                 <Folder className="text-[#4A4A4A]" size={24} />
               </div>
-              <p className="text-[#6B6B6B] text-sm">Empty directory</p>
-              <p className="text-xs text-[#4A4A4A] mt-1">Upload files to get started</p>
+              <p className="text-[#6B6B6B] text-sm">目录为空</p>
+              <p className="text-xs text-[#4A4A4A] mt-1">上传文件以开始</p>
             </div>
           ) : (
             <ul className="divide-y divide-[#2A2A2A]">

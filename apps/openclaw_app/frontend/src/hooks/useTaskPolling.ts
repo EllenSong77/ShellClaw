@@ -59,7 +59,7 @@ export function useTaskPolling({ enabled = true, interval = 2000 }: UseTaskPolli
             status: 'error',
             stdout_text: task.stdout_text || '',
             stderr_text: task.stderr_text || '',
-            error_text: task.error_text || 'Task failed',
+            error_text: task.error_text || '任务失败',
             duration_sec: task.duration_sec || 0,
           };
           handleWSEvent(event);
@@ -70,7 +70,7 @@ export function useTaskPolling({ enabled = true, interval = 2000 }: UseTaskPolli
             status: 'timeout',
             stdout_text: task.stdout_text || '',
             stderr_text: task.stderr_text || '',
-            error_text: 'Task timed out',
+            error_text: '任务超时',
             duration_sec: task.duration_sec || 0,
           };
           handleWSEvent(event);
@@ -86,11 +86,20 @@ export function useTaskPolling({ enabled = true, interval = 2000 }: UseTaskPolli
     // Then poll at interval
     intervalRef.current = window.setInterval(pollTask, interval);
 
+    // Stop polling after 60s total duration if it doesn't stop naturally
+    const timeoutId = window.setTimeout(() => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = undefined;
+      }
+    }, 60000);
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
       }
+      window.clearTimeout(timeoutId);
     };
   }, [enabled, currentTaskId, interval, handleWSEvent]);
 
