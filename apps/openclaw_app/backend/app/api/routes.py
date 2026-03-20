@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from mimetypes import guess_type
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from redis import Redis
@@ -16,11 +16,13 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.db.session import SessionLocal, get_db
+from app.schemas.access import AccessConfigResponse, AccessStatusResponse, RedeemCodeRequest, RedeemCodeResponse
 from app.models.billing_order import BillingOrder
 from app.models.enums import BillingOrderStatus, BillingProvider, Plan, SandboxStatus, TaskStatus
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.billing import (
+    BillingConfigResponse,
     BillingOrdersResponse,
     BillingPortalResponse,
     BillingSummaryResponse,
@@ -40,9 +42,18 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.services.auth import get_current_user
+from app.services.access_codes import (
+    apply_activation_benefits,
+    access_status_for_user,
+    consume_activation_code,
+    record_activation_redemption,
+    redeem_code_for_user,
+)
 from app.services.billing import (
     billing_summary_for_user,
     create_mock_checkout,
+    get_order_by_external_id,
+    get_order_for_user,
     list_orders_for_user,
     mark_order_cancelled,
     mark_order_failed,
@@ -53,7 +64,10 @@ from app.services.billing import (
 from app.services.docker_sandbox import DockerSandboxManager
 from app.services.errors import api_error
 from app.services.events import TaskEventPublisher, user_events_channel
+from app.services.plan_config import get_plan_spec
+from app.services.rate_limit import RateLimitService, client_ip
 from app.services.quota import QuotaExceededError, QuotaService
+from app.services.billing_provider import verify_stripe_signature
 from app.services.sandbox import SandboxService
 from app.services.task_queue import TaskQueueService
 from app.services.user_plan import normalize_user_plan
@@ -77,7 +91,7 @@ def get_usage_for_user(user: User) -> UsageResponse:
     now = datetime.now(timezone.utc)
     key = QuotaService(client)._key(str(user.id), now)
     daily_used = int(client.get(key) or 0)
-    daily_limit = settings.free_daily_task_limit if user.plan == Plan.FREE else None
+    daily_limit = get_plan_spec(user.plan).task_limit_daily
     daily_remaining = None if daily_limit is None else max(0, daily_limit - daily_used)
     return UsageResponse(
         plan=user.plan,
@@ -100,8 +114,8 @@ def create_task_for_user(db: Session, user: User, payload: TaskCreateRequest) ->
             upgrade_required=True,
             current_plan=user.plan,
             suggested_plan=Plan.PAID_PERSONAL,
-            redirect_to="/pricing",
-            action="upgrade",
+            redirect_to="/account",
+            action="redeem_code",
         )
     try:
         QuotaService(client).check_and_consume(str(user.id), user.plan, user.subscription_status)
@@ -169,28 +183,58 @@ def healthz():
     return {'ok': True, 'service': settings.app_name}
 
 
+@router.get('/auth/access-config', response_model=AccessConfigResponse)
+def access_config():
+    return AccessConfigResponse(activation_required=settings.require_activation_code)
+
+
 @router.post('/auth/register', response_model=UserResponse)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+def register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+    RateLimitService(redis_client()).check(
+        "auth-register",
+        f"{client_ip(request)}:{payload.email.lower()}",
+        limit=settings.auth_rate_limit_max_attempts,
+        window_sec=settings.auth_rate_limit_window_sec,
+    )
     existing = db.query(User).filter(User.email == payload.email).one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail='邮箱已存在')
 
+    activation_code = consume_activation_code(db, payload.activation_code, payload.email, settings.require_activation_code)
+    now = datetime.now(timezone.utc)
+
+    is_activated = activation_code is not None or not settings.require_activation_code
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
-        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=7),
+        trial_ends_at=now + timedelta(days=7),
+        is_activated=is_activated,
+        activated_at=now if is_activated else None,
+        activation_code_id=activation_code.id if activation_code else None,
         last_active_at=datetime.utcnow(),
     )
+    if activation_code:
+        apply_activation_benefits(user, activation_code, now=now)
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if activation_code:
+        record_activation_redemption(db, user, activation_code)
+        db.commit()
 
     SandboxService(db).ensure_for_user(user)
     return user
 
 
 @router.post('/auth/login', response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    RateLimitService(redis_client()).check(
+        "auth-login",
+        f"{client_ip(request)}:{payload.email.lower()}",
+        limit=settings.auth_rate_limit_max_attempts,
+        window_sec=settings.auth_rate_limit_window_sec,
+    )
     user = db.query(User).filter(User.email == payload.email).one_or_none()
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='邮箱或密码错误')
@@ -202,6 +246,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get('/me', response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get('/me/access-status', response_model=AccessStatusResponse)
+def my_access_status(current_user: User = Depends(get_current_user)):
+    return access_status_for_user(current_user, settings.require_activation_code)
 
 
 @router.get('/me/usage', response_model=UsageResponse)
@@ -227,21 +276,60 @@ def get_my_orders(db: Session = Depends(get_db), current_user: User = Depends(ge
     return BillingOrdersResponse(items=list_orders_for_user(db, user))
 
 
+@router.get('/billing/config', response_model=BillingConfigResponse)
+def billing_config():
+    return BillingConfigResponse(
+        default_provider=BillingProvider(settings.billing_default_provider),
+        stripe_enabled=bool(settings.stripe_secret_key and settings.stripe_publishable_key),
+        stripe_publishable_key=settings.stripe_publishable_key,
+    )
+
+
+@router.post('/me/redeem', response_model=RedeemCodeResponse)
+def redeem_code(
+    payload: RedeemCodeRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    RateLimitService(redis_client()).check(
+        "redeem-code",
+        f"{client_ip(request)}:{current_user.id}",
+        limit=settings.redeem_rate_limit_max_attempts,
+        window_sec=settings.redeem_rate_limit_window_sec,
+    )
+    user = normalize_user_plan(db, current_user)
+    return redeem_code_for_user(db, user, payload.code)
+
+
 @router.post('/billing/checkout', response_model=CheckoutResponse)
-def create_checkout(payload: CheckoutRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if payload.plan in {Plan.FREE, Plan.TRIAL}:
+def create_checkout(
+    payload: CheckoutRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    RateLimitService(redis_client()).check(
+        "billing-checkout",
+        f"{client_ip(request)}:{current_user.id}",
+        limit=settings.checkout_rate_limit_max_attempts,
+        window_sec=settings.checkout_rate_limit_window_sec,
+    )
+    plan_spec = get_plan_spec(payload.plan)
+    provider = payload.provider or BillingProvider(settings.billing_default_provider)
+    if not plan_spec.available_for_checkout:
         raise api_error(
             400,
             code="INVALID_BILLING_PLAN",
             message="请选择付费套餐。",
             current_plan=current_user.plan,
             suggested_plan=Plan.PAID_PERSONAL,
-            redirect_to="/pricing",
-            action="upgrade",
+            redirect_to="/account",
+            action="redeem_code",
         )
     user = normalize_user_plan(db, current_user)
     try:
-        return create_mock_checkout(db, user, payload.plan, payload.provider, payload.success_url, payload.cancel_url)
+        return create_mock_checkout(db, user, payload.plan, provider, payload.success_url, payload.cancel_url)
     except NotImplementedError:
         raise api_error(
             400,
@@ -250,6 +338,38 @@ def create_checkout(payload: CheckoutRequest, db: Session = Depends(get_db), cur
             current_plan=user.plan,
             suggested_plan=payload.plan,
         )
+
+
+@router.post('/billing/webhooks/stripe')
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.body()
+    if not verify_stripe_signature(payload, request.headers.get("stripe-signature")):
+        raise api_error(400, code="INVALID_WEBHOOK_SIGNATURE", message="Webhook 签名无效。")
+
+    event = json.loads(payload.decode("utf-8"))
+    if event.get("type") != "checkout.session.completed":
+        return {"ok": True, "ignored": True}
+
+    data_object = event.get("data", {}).get("object", {})
+    external_order_id = data_object.get("id")
+    if not external_order_id:
+        return {"ok": True, "ignored": True}
+
+    order = get_order_by_external_id(db, BillingProvider.STRIPE, external_order_id)
+    if order is None:
+        return {"ok": True, "ignored": True}
+
+    user = db.query(User).filter(User.id == order.user_id).one()
+    stripe_customer_id = data_object.get("customer")
+    if stripe_customer_id and not user.billing_customer_id:
+        user.billing_customer_id = stripe_customer_id
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if order.status == BillingOrderStatus.PENDING:
+        mark_order_paid(db, user, order)
+    return {"ok": True}
 
 
 @router.post('/billing/portal', response_model=BillingPortalResponse)
@@ -265,57 +385,27 @@ def create_billing_portal(db: Session = Depends(get_db), current_user: User = De
 @router.post('/billing/orders/{order_id}/mock/complete')
 def complete_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = normalize_user_plan(db, current_user)
-    order = (
-        db.query(BillingOrder)
-        .filter(BillingOrder.id == order_id, BillingOrder.user_id == user.id)
-        .one_or_none()
-    )
-    if order is None:
-        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    order = get_order_for_user(db, user, order_id)
     if order.provider != BillingProvider.MOCK:
         raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
-    if order.status == BillingOrderStatus.PAID:
-        return order
-    if order.status in {BillingOrderStatus.CANCELLED, BillingOrderStatus.REFUNDED}:
-        raise api_error(409, code="ORDER_STATE_INVALID", message="当前订单状态不允许完成支付。")
     return mark_order_paid(db, user, order)
 
 
 @router.post('/billing/orders/{order_id}/mock/fail')
 def fail_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    _user = normalize_user_plan(db, current_user)
-    order = (
-        db.query(BillingOrder)
-        .filter(BillingOrder.id == order_id, BillingOrder.user_id == current_user.id)
-        .one_or_none()
-    )
-    if order is None:
-        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    user = normalize_user_plan(db, current_user)
+    order = get_order_for_user(db, user, order_id)
     if order.provider != BillingProvider.MOCK:
         raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
-    if order.status == BillingOrderStatus.PAID:
-        raise api_error(409, code="ORDER_STATE_INVALID", message="已支付订单不能标记为失败。")
-    if order.status == BillingOrderStatus.CANCELLED:
-        raise api_error(409, code="ORDER_STATE_INVALID", message="已取消订单不能标记为失败。")
     return mark_order_failed(db, order)
 
 
 @router.post('/billing/orders/{order_id}/mock/cancel')
 def cancel_mock_order(order_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    _user = normalize_user_plan(db, current_user)
-    order = (
-        db.query(BillingOrder)
-        .filter(BillingOrder.id == order_id, BillingOrder.user_id == current_user.id)
-        .one_or_none()
-    )
-    if order is None:
-        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    user = normalize_user_plan(db, current_user)
+    order = get_order_for_user(db, user, order_id)
     if order.provider != BillingProvider.MOCK:
         raise api_error(400, code="UNSUPPORTED_ORDER_PROVIDER", message="仅支持 mock 订单。")
-    if order.status == BillingOrderStatus.PAID:
-        raise api_error(409, code="ORDER_STATE_INVALID", message="已支付订单不能取消。")
-    if order.status == BillingOrderStatus.CANCELLED:
-        return order
     return mark_order_cancelled(db, order)
 
 

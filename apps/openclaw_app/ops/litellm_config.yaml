@@ -1,8 +1,9 @@
 model_list:
   - model_name: default
     litellm_params:
-      model: deepseek/deepseek-chat
-      api_key: os.environ/DEEPSEEK_API_KEY
+      model: openai/glm-4.7-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/GLM_API_KEY
 
 litellm_settings:
   drop_params: true

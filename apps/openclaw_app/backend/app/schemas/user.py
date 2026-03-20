@@ -9,6 +9,7 @@ from app.models.enums import Plan, SandboxStatus
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
+    activation_code: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -27,6 +28,8 @@ class UserResponse(BaseModel):
     plan: Plan
     trial_ends_at: datetime | None
     paid_until: datetime | None
+    is_activated: bool
+    activated_at: datetime | None
 
     class Config:
         from_attributes = True

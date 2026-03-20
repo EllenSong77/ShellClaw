@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,9 +39,18 @@ class User(Base):
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     billing_provider: Mapped[BillingProvider | None] = mapped_column(billing_provider_enum, nullable=True)
     billing_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_activated: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activation_code_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("activation_codes.id"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sandboxes = relationship("Sandbox", back_populates="user")
     tasks = relationship("Task", back_populates="user")
     billing_orders = relationship("BillingOrder", back_populates="user")
+    activation_code = relationship("ActivationCode", back_populates="users")
+    code_redemptions = relationship("CodeRedemption", back_populates="user")

@@ -148,10 +148,10 @@ export function ChatPage() {
         <div className="flex items-center gap-2">
           {isUpgradeRequired && (
             <button
-              onClick={() => navigate('/pricing')}
+              onClick={() => navigate(errorDetail?.redirect_to || '/account')}
               className="bg-[#22D3EE] hover:bg-[#67E8F9] text-black text-[10px] font-bold px-3 py-1.5 rounded uppercase tracking-wider transition-all active:scale-95 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
             >
-              Upgrade Now
+              {errorDetail?.action === 'redeem_code' ? 'Redeem Code' : 'Upgrade Now'}
             </button>
           )}
           <button

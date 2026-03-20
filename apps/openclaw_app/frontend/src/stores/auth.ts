@@ -13,7 +13,7 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, activationCode?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   refreshSandbox: () => Promise<void>;
@@ -55,10 +55,10 @@ export const useAuthStore = create<AuthState>()(
       }
     },
 
-    register: async (email: string, password: string) => {
+    register: async (email: string, password: string, activationCode?: string) => {
       set({ isLoading: true, error: null });
       try {
-        await api.register(email, password);
+        await api.register(email, password, activationCode);
         await api.login(email, password);
         const user = await api.getMe();
         set({ user, isAuthenticated: true, isLoading: false });

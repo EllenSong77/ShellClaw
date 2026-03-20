@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -17,32 +15,14 @@ from app.schemas.billing import (
     SubscriptionResponse,
 )
 from app.services.billing_provider import get_billing_provider
-
-
-@dataclass(frozen=True)
-class PlanSpec:
-    label: str
-    price_month_cny: Decimal
-    task_limit_daily: int | None
-    max_concurrency: int
-    workspace_limit_mb: int
-    sandbox_timeout_minutes: int
-    highlighted: bool = False
-
-
-PLAN_SPECS: dict[Plan, PlanSpec] = {
-    Plan.FREE: PlanSpec("Free", Decimal("0"), 5, 1, 256, 15),
-    Plan.TRIAL: PlanSpec("Trial", Decimal("0"), None, 1, 512, 30, highlighted=True),
-    Plan.PAID_PERSONAL: PlanSpec("Personal", Decimal("39"), None, 2, 2048, 60, highlighted=True),
-    Plan.PAID_PRO: PlanSpec("Pro", Decimal("99"), None, 4, 10240, 180),
-}
+from app.services.plan_config import get_plan_spec, listed_plan_specs
+from app.services.errors import api_error
 
 
 def serialize_plan_specs() -> list[PlanFeatureResponse]:
-    ordered = [Plan.FREE, Plan.PAID_PERSONAL, Plan.PAID_PRO]
     return [
         PlanFeatureResponse(
-            plan=plan,
+            plan=spec.plan,
             label=spec.label,
             price_month_cny=spec.price_month_cny,
             task_limit_daily=spec.task_limit_daily,
@@ -51,7 +31,7 @@ def serialize_plan_specs() -> list[PlanFeatureResponse]:
             sandbox_timeout_minutes=spec.sandbox_timeout_minutes,
             highlighted=spec.highlighted,
         )
-        for plan, spec in ((plan, PLAN_SPECS[plan]) for plan in ordered)
+        for spec in listed_plan_specs()
     ]
 
 
@@ -99,6 +79,26 @@ def list_orders_for_user(db: Session, user: User) -> list[BillingOrder]:
     )
 
 
+def get_order_for_user(db: Session, user: User, order_id) -> BillingOrder:
+    order = db.query(BillingOrder).filter(BillingOrder.id == order_id, BillingOrder.user_id == user.id).one_or_none()
+    if order is None:
+        raise api_error(404, code="ORDER_NOT_FOUND", message="订单不存在。")
+    return order
+
+
+def get_order_by_external_id(db: Session, provider: BillingProvider, external_order_id: str) -> BillingOrder | None:
+    return (
+        db.query(BillingOrder)
+        .filter(BillingOrder.provider == provider, BillingOrder.external_order_id == external_order_id)
+        .one_or_none()
+    )
+
+
+def assert_pending_order(order: BillingOrder) -> None:
+    if order.status != BillingOrderStatus.PENDING:
+        raise api_error(409, code="ORDER_STATE_INVALID", message="订单状态不允许重复流转。")
+
+
 def create_mock_checkout(
     db: Session,
     user: User,
@@ -107,7 +107,7 @@ def create_mock_checkout(
     success_url: str | None,
     cancel_url: str | None,
 ) -> CheckoutResponse:
-    spec = PLAN_SPECS[plan]
+    spec = get_plan_spec(plan)
     provider_adapter = get_billing_provider(provider)
     checkout = provider_adapter.create_checkout(
         user=user,
@@ -152,6 +152,7 @@ def portal_url_for_user(user: User) -> tuple[BillingProvider, str]:
 
 
 def mark_order_paid(db: Session, user: User, order: BillingOrder) -> BillingOrderResponse:
+    assert_pending_order(order)
     now = datetime.now(timezone.utc)
     order.status = BillingOrderStatus.PAID
     order.paid_at = now
@@ -171,6 +172,7 @@ def mark_order_paid(db: Session, user: User, order: BillingOrder) -> BillingOrde
 
 
 def mark_order_failed(db: Session, order: BillingOrder) -> BillingOrderResponse:
+    assert_pending_order(order)
     order.status = BillingOrderStatus.FAILED
     db.add(order)
     db.commit()
@@ -179,6 +181,7 @@ def mark_order_failed(db: Session, order: BillingOrder) -> BillingOrderResponse:
 
 
 def mark_order_cancelled(db: Session, order: BillingOrder) -> BillingOrderResponse:
+    assert_pending_order(order)
     order.status = BillingOrderStatus.CANCELLED
     order.cancelled_at = datetime.now(timezone.utc)
     db.add(order)

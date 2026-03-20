@@ -15,6 +15,7 @@ import type {
   CheckoutResponse,
   BillingPortalResponse,
   ApiErrorDetail,
+  AccessConfig,
 } from '../types';
 
 const API_BASE = '/api';
@@ -90,10 +91,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   // ============ Auth ============
 
-  async register(email: string, password: string): Promise<User> {
+  async getAccessConfig(): Promise<AccessConfig> {
+    return request('/auth/access-config');
+  },
+
+  async register(email: string, password: string, activationCode?: string): Promise<User> {
     return request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, activation_code: activationCode }),
     });
   },
 
@@ -230,6 +235,13 @@ export const api = {
   async mockCancelOrder(orderId: string): Promise<{ ok: boolean }> {
     return request(`/billing/orders/${orderId}/mock/cancel`, {
       method: 'POST',
+    });
+  },
+
+  async redeemCode(code: string): Promise<{ ok: boolean; message: string }> {
+    return request('/me/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     });
   },
 };

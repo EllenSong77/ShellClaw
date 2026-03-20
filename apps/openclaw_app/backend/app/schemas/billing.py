@@ -62,7 +62,7 @@ class BillingOrdersResponse(BaseModel):
 
 class CheckoutRequest(BaseModel):
     plan: Plan
-    provider: BillingProvider = BillingProvider.MOCK
+    provider: BillingProvider | None = None
     success_url: str | None = None
     cancel_url: str | None = None
 
@@ -79,3 +79,9 @@ class BillingPortalResponse(BaseModel):
     ok: bool
     url: str
     provider: BillingProvider
+
+
+class BillingConfigResponse(BaseModel):
+    default_provider: BillingProvider
+    stripe_enabled: bool
+    stripe_publishable_key: str | None

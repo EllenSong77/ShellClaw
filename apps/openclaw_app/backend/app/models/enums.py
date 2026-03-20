@@ -31,6 +31,11 @@ class BillingOrderStatus(StrEnum):
     REFUNDED = "refunded"
 
 
+class RedeemCodeType(StrEnum):
+    PLAN_GRANT = "plan_grant"
+    TRIAL_EXTEND = "trial_extend"
+
+
 class SandboxStatus(StrEnum):
     CREATING = "creating"
     RUNNING = "running"

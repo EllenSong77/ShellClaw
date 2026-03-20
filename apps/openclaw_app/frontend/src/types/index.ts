@@ -1,3 +1,8 @@
+export interface AccessConfig {
+  activation_required: boolean;
+  registration_enabled: boolean;
+}
+
 // User types
 export type Plan = 'trial' | 'free' | 'paid_personal' | 'paid_pro';
 export type SandboxStatus = 'creating' | 'running' | 'paused' | 'stopped' | 'archived';

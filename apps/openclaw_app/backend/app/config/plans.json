@@ -1,0 +1,52 @@
+{
+  "plans": [
+    {
+      "plan": "free",
+      "label": "Free",
+      "price_month_cny": "0",
+      "task_limit_daily": 5,
+      "max_concurrency": 1,
+      "workspace_limit_mb": 256,
+      "sandbox_timeout_minutes": 15,
+      "highlighted": false,
+      "enabled": true,
+      "available_for_checkout": false
+    },
+    {
+      "plan": "trial",
+      "label": "Trial",
+      "price_month_cny": "0",
+      "task_limit_daily": null,
+      "max_concurrency": 1,
+      "workspace_limit_mb": 512,
+      "sandbox_timeout_minutes": 30,
+      "highlighted": true,
+      "enabled": true,
+      "available_for_checkout": false
+    },
+    {
+      "plan": "paid_personal",
+      "label": "Personal",
+      "price_month_cny": "39",
+      "task_limit_daily": null,
+      "max_concurrency": 2,
+      "workspace_limit_mb": 2048,
+      "sandbox_timeout_minutes": 60,
+      "highlighted": true,
+      "enabled": true,
+      "available_for_checkout": true
+    },
+    {
+      "plan": "paid_pro",
+      "label": "Pro",
+      "price_month_cny": "99",
+      "task_limit_daily": null,
+      "max_concurrency": 4,
+      "workspace_limit_mb": 10240,
+      "sandbox_timeout_minutes": 180,
+      "highlighted": false,
+      "enabled": true,
+      "available_for_checkout": true
+    }
+  ]
+}

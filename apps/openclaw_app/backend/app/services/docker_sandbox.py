@@ -52,6 +52,7 @@ class DockerSandboxManager:
     def _sandbox_env(self, user_key: str) -> dict[str, str]:
         env = {
             "LITELLM_BASE_URL": settings.litellm_base_url,
+            "LITELLM_API_KEY": "shellclaw-local",
             "OPENCLAW_TASK_MODE": settings.sandbox_task_mode,
             "OPENCLAW_USER_KEY": user_key,
             "OPENCLAW_TASK_COMMAND_TEMPLATE": settings.sandbox_command_template,

@@ -2,8 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 from redis import Redis
 
-from app.core.config import settings
 from app.models.enums import Plan, SubscriptionStatus
+from app.services.plan_config import get_plan_spec
 
 
 class QuotaExceededError(Exception):
@@ -40,23 +40,24 @@ class QuotaService:
         now = datetime.now(timezone.utc)
         key = self._key(user_id, now)
         count = self.redis.get(key)
-        if count is not None and int(count) >= settings.free_daily_task_limit:
+        daily_limit = get_plan_spec(plan).task_limit_daily
+        if daily_limit is not None and count is not None and int(count) >= daily_limit:
             if subscription_status == SubscriptionStatus.EXPIRED:
                 raise QuotaExceededError(
                     "TRIAL_ENDED",
-                    "试用已结束，请升级套餐后继续使用。",
+                    "试用已结束，请输入激活码后继续使用。",
                     upgrade_required=True,
                     suggested_plan=Plan.PAID_PERSONAL,
-                    redirect_to="/pricing",
-                    action="upgrade",
+                    redirect_to="/account",
+                    action="redeem_code",
                 )
             raise QuotaExceededError(
                 "DAILY_LIMIT_REACHED",
-                "今日额度已用完，请明天再试或升级套餐。",
+                "今日额度已用完，请明天再试或输入激活码提升权限。",
                 upgrade_required=True,
                 suggested_plan=Plan.PAID_PERSONAL,
-                redirect_to="/pricing",
-                action="upgrade",
+                redirect_to="/account",
+                action="redeem_code",
             )
 
         tomorrow = datetime.combine((now + timedelta(days=1)).date(), datetime.min.time(), tzinfo=timezone.utc)

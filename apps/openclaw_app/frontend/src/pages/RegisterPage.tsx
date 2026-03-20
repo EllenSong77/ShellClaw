@@ -1,18 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { useAuthStore } from '../stores/auth';
+import { api } from '../api/client';
+import type { AccessConfig } from '../types';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [activationCode, setActivationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accessConfig, setAccessConfig] = useState<AccessConfig | null>(null);
 
   const navigate = useNavigate();
   const register = useAuthStore((state) => state.register);
+
+  useEffect(() => {
+    api.getAccessConfig().then(setAccessConfig).catch(console.error);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +36,15 @@ export function RegisterPage() {
       return;
     }
 
+    if (accessConfig?.activation_required && !activationCode) {
+      setError('Activation code is required');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await register(email, password);
+      await register(email, password, activationCode);
       navigate('/chat', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -39,6 +52,8 @@ export function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  const isActivationRequired = accessConfig?.activation_required ?? false;
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#FAFAFA] flex flex-col items-center justify-center p-4">
@@ -49,11 +64,18 @@ export function RegisterPage() {
           <p className="text-[#6B6B6B] mt-2 text-sm">Terminal AI Assistant</p>
         </div>
 
-        {/* Trial banner */}
-        <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-md px-4 py-3 mb-4 text-center">
-          <p className="text-[#22D3EE] text-sm font-medium">7-day free trial</p>
-          <p className="text-[#6B6B6B] text-xs mt-0.5">No credit card required</p>
-        </div>
+        {/* Banner */}
+        {isActivationRequired ? (
+          <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-md px-4 py-3 mb-4 text-center">
+            <p className="text-[#22D3EE] text-sm font-medium">Alpha Access Only</p>
+            <p className="text-[#6B6B6B] text-xs mt-0.5">Activation code required to register</p>
+          </div>
+        ) : (
+          <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-md px-4 py-3 mb-4 text-center">
+            <p className="text-[#22D3EE] text-sm font-medium">Internal Alpha Test</p>
+            <p className="text-[#6B6B6B] text-xs mt-0.5">Early access for invited users</p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-[#141414] rounded-lg p-6 border border-[#2A2A2A]">
@@ -110,6 +132,21 @@ export function RegisterPage() {
                 required
                 className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/30 transition-all text-sm"
                 placeholder="Confirm password"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="activationCode" className="block text-xs font-medium text-[#A1A1A1] mb-1.5 uppercase tracking-wide">
+                {isActivationRequired ? 'Activation Code' : 'Activation Code (Optional)'}
+              </label>
+              <input
+                type="text"
+                id="activationCode"
+                value={activationCode}
+                onChange={(e) => setActivationCode(e.target.value)}
+                required={isActivationRequired}
+                className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-[#FAFAFA] placeholder-[#4A4A4A] focus:outline-none focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE]/30 transition-all text-sm font-mono"
+                placeholder="PRO-XXXX-XXXX"
               />
             </div>
 

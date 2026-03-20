@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
-import { FileText, Loader2, AlertCircle, Calendar, DollarSign, ExternalLink, ChevronLeft, CreditCard, Hash, XCircle, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Loader2, AlertCircle, Calendar, DollarSign, ChevronLeft, Hash, XCircle, CheckCircle, Clock, Zap } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
 import type { BillingOrderResponse, BillingOrderStatus } from '../types';
 
 const STATUS_CONFIG: Record<BillingOrderStatus, { label: string; color: string; icon: ComponentType<LucideProps>; bg: string }> = {
-  pending: { label: 'Pending Payment', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
-  paid: { label: 'Payment Verified', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
-  failed: { label: 'Transaction Failed', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
-  cancelled: { label: 'Order Cancelled', color: 'text-gray-500', bg: 'bg-gray-500/10', icon: XCircle },
-  refunded: { label: 'Payment Refunded', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: DollarSign },
+  pending: { label: 'Processing', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
+  paid: { label: 'Activated', color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle },
+  failed: { label: 'Failed', color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle },
+  cancelled: { label: 'Voided', color: 'text-gray-500', bg: 'bg-gray-500/10', icon: XCircle },
+  refunded: { label: 'Revoked', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: DollarSign },
 };
 
 const PLAN_LABELS: Record<string, string> = {
-  trial: 'Trial Tier Upgrade',
-  free: 'Free Tier',
-  paid_personal: 'Personal Pro Subscription',
-  paid_pro: 'Ultimate Pro Subscription',
+  trial: 'Alpha Trial Activation',
+  free: 'Alpha Free Activation',
+  paid_personal: 'Personal Alpha Activation',
+  paid_pro: 'Pro Alpha Activation',
 };
 
 export function BillingPage() {
@@ -76,8 +76,8 @@ export function BillingPage() {
             <ChevronLeft size={20} className="text-[#6B6B6B]" />
           </button>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight uppercase">Order Ledger</h1>
-            <p className="text-[9px] text-[#404040] uppercase font-black tracking-[0.2em]">Verified Transaction Records</p>
+            <h1 className="text-lg font-black text-white tracking-tight uppercase">Redemption Logs</h1>
+            <p className="text-[9px] text-[#404040] uppercase font-black tracking-[0.2em]">Activation History</p>
           </div>
         </div>
       </div>
@@ -90,7 +90,7 @@ export function BillingPage() {
               <CheckCircle size={24} />
             </div>
             <div>
-              <p className="text-sm font-black text-white uppercase tracking-tight">Deployment Successful</p>
+              <p className="text-sm font-black text-white uppercase tracking-tight">Activation Successful</p>
               <p className="text-xs text-green-500/70 font-medium">Your account tier has been updated and propagated system-wide.</p>
             </div>
           </div>
@@ -126,13 +126,13 @@ export function BillingPage() {
             <div className="w-24 h-24 bg-[#1A1A1A] rounded-3xl flex items-center justify-center mb-8 border border-[#1F1F1F] shadow-xl">
               <FileText size={40} className="text-[#262626]" />
             </div>
-            <p className="text-white font-black text-lg uppercase tracking-tight mb-3">No Data Found</p>
-            <p className="text-xs text-[#404040] mb-10 text-center max-w-[280px] font-medium leading-relaxed uppercase tracking-wider">The transaction history for this account is currently empty. Initiate a plan upgrade to populate this ledger.</p>
+            <p className="text-white font-black text-lg uppercase tracking-tight mb-3">No Records Found</p>
+            <p className="text-xs text-[#404040] mb-10 text-center max-w-[280px] font-medium leading-relaxed uppercase tracking-wider">The activation history for this account is currently empty. Redeem a code in the account page to see records here.</p>
             <button
-              onClick={() => navigate('/pricing')}
+              onClick={() => navigate('/account')}
               className="px-8 py-3 bg-[#22D3EE] hover:bg-[#67E8F9] text-black rounded-xl text-xs font-black uppercase tracking-[0.2em] transition-all active:scale-95 shadow-[0_10px_20px_rgba(34,211,238,0.2)]"
             >
-              Execute Upgrade
+              Go to Account
             </button>
           </div>
         )}
@@ -158,14 +158,6 @@ export function BillingPage() {
                           {status.label}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xl font-black text-white font-mono tracking-tighter">
-                          ¥{order.amount_cny}
-                        </div>
-                        <div className="text-[9px] font-black text-[#404040] uppercase tracking-widest mt-1">
-                          Settlement Amount
-                        </div>
-                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6 pt-6 border-t border-[#1F1F1F]">
@@ -188,20 +180,10 @@ export function BillingPage() {
                         ID: {order.external_order_id || order.id}
                       </span>
                     </div>
-                    
-                    {order.checkout_url && order.status === 'pending' && (
-                      <a
-                        href={order.checkout_url}
-                        className="flex items-center gap-2 text-[10px] font-black text-[#22D3EE] hover:text-[#67E8F9] transition-all uppercase tracking-widest bg-[#22D3EE]/5 px-4 py-2 rounded-lg border border-[#22D3EE]/10"
-                      >
-                        PROCEED
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
 
                     <div className="flex items-center gap-2 text-[9px] font-black text-[#404040] uppercase tracking-widest">
-                      <CreditCard size={12} />
-                      {order.provider}
+                      <Zap size={12} />
+                      ALPHA ACCESS
                     </div>
                   </div>
                 </div>

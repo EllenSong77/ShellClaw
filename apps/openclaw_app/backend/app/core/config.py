@@ -1,10 +1,13 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
 
 
 class Settings(BaseSettings):
     app_name: str = "ShellClaw API"
     app_env: str = "dev"
     debug: bool = True
+    force_https: bool = False
+    allowed_hosts: str = "localhost,127.0.0.1"
 
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/openclaw_app"
     redis_url: str = "redis://localhost:6379/0"
@@ -22,6 +25,18 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7
     task_events_channel_prefix: str = "task-events"
     cors_allow_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    require_activation_code: bool = False
+    plans_config_path: str = str(Path(__file__).resolve().parents[1] / "config" / "plans.json")
+    billing_default_provider: str = "mock"
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_publishable_key: str | None = None
+    auth_rate_limit_window_sec: int = 60
+    auth_rate_limit_max_attempts: int = 10
+    redeem_rate_limit_window_sec: int = 300
+    redeem_rate_limit_max_attempts: int = 15
+    checkout_rate_limit_window_sec: int = 300
+    checkout_rate_limit_max_attempts: int = 20
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
